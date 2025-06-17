@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Brain, Heart, Stomach, Eye, Ear } from 'lucide-react';
+import { Search, Brain, Heart, Activity, Eye, Ear } from 'lucide-react';
 
 interface ChiefComplaintSelectorProps {
   onSelect: (complaint: string) => void;
@@ -13,10 +13,10 @@ interface ChiefComplaintSelectorProps {
 const commonComplaints = [
   { name: 'Headache', icon: Brain, category: 'Neurological' },
   { name: 'Chest Pain', icon: Heart, category: 'Cardiovascular' },
-  { name: 'Abdominal Pain', icon: Stomach, category: 'Gastrointestinal' },
+  { name: 'Abdominal Pain', icon: Activity, category: 'Gastrointestinal' },
   { name: 'Shortness of Breath', icon: Heart, category: 'Respiratory' },
   { name: 'Fever', icon: Brain, category: 'General' },
-  { name: 'Nausea/Vomiting', icon: Stomach, category: 'Gastrointestinal' },
+  { name: 'Nausea/Vomiting', icon: Activity, category: 'Gastrointestinal' },
   { name: 'Dizziness', icon: Brain, category: 'Neurological' },
   { name: 'Joint Pain', icon: Brain, category: 'Musculoskeletal' },
   { name: 'Back Pain', icon: Brain, category: 'Musculoskeletal' },

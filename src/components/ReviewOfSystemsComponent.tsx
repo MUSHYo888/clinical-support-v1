@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useMedical } from '@/context/MedicalContext';
 import { 
-  Eye, Heart, Zap, Stomach, Kidney, 
+  Eye, Heart, Zap, Activity, Circle, 
   Brain, Bone, Smile, PersonStanding, 
   Thermometer, Shield, Baby 
 } from 'lucide-react';
@@ -41,12 +41,12 @@ const rosSystems: ROSSystem[] = [
   },
   {
     name: 'Gastrointestinal',
-    icon: Stomach,
+    icon: Activity,
     symptoms: ['Nausea', 'Vomiting', 'Diarrhea', 'Constipation', 'Abdominal pain', 'Heartburn']
   },
   {
     name: 'Genitourinary',
-    icon: Kidney,
+    icon: Circle,
     symptoms: ['Dysuria', 'Frequency', 'Urgency', 'Hematuria', 'Incontinence']
   },
   {
