@@ -1,4 +1,6 @@
 
+// ABOUTME: Main application page handling workflow state and navigation
+// ABOUTME: Orchestrates patient creation, assessment workflow, and data persistence
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
@@ -7,6 +9,8 @@ import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { AssessmentWorkflow } from '@/components/AssessmentWorkflow';
 import { Patient, Assessment } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
+import { useCreateAssessment, useUpdateAssessmentStep } from '@/hooks/useAssessment';
+import { useUpdatePatientAssessment } from '@/hooks/usePatients';
 
 type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'summary';
 
@@ -14,31 +18,43 @@ const Index = () => {
   const { state, dispatch } = useMedical();
   const [currentView, setCurrentView] = useState<AppState>('dashboard');
   const [selectedComplaint, setSelectedComplaint] = useState<string>('');
+  
+  const createAssessmentMutation = useCreateAssessment();
+  const updatePatientMutation = useUpdatePatientAssessment();
 
   const handleNewPatient = () => {
     setCurrentView('new-patient');
   };
 
   const handlePatientCreated = (patient: Patient) => {
+    console.log('Patient created:', patient);
     setCurrentView('chief-complaint');
   };
 
-  const handleComplaintSelected = (complaint: string) => {
+  const handleComplaintSelected = async (complaint: string) => {
     setSelectedComplaint(complaint);
     
-    // Create new assessment
-    const assessment: Assessment = {
-      id: `assessment_${Date.now()}`,
-      patientId: state.currentPatient?.id || '',
-      chiefComplaint: complaint,
-      status: 'in-progress',
-      currentStep: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment });
-    setCurrentView('assessment');
+    if (!state.currentPatient) {
+      console.error('No current patient set');
+      return;
+    }
+
+    try {
+      // Create new assessment in database
+      const assessment = await createAssessmentMutation.mutateAsync({
+        patientId: state.currentPatient.id,
+        chiefComplaint: complaint
+      });
+      
+      // Update patient's last assessment timestamp
+      await updatePatientMutation.mutateAsync(state.currentPatient.id);
+      
+      // Set assessment in context
+      dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment });
+      setCurrentView('assessment');
+    } catch (error) {
+      console.error('Failed to create assessment:', error);
+    }
   };
 
   const handleAssessmentComplete = () => {

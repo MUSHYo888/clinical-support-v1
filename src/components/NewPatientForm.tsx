@@ -1,11 +1,14 @@
 
+// ABOUTME: Form component for creating new patients with real-time data persistence
+// ABOUTME: Validates patient data and saves to Supabase database
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Patient } from '@/types/medical';
+import { useCreatePatient } from '@/hooks/usePatients';
 import { useMedical } from '@/context/MedicalContext';
 
 interface NewPatientFormProps {
@@ -15,51 +18,78 @@ interface NewPatientFormProps {
 
 export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
   const { dispatch } = useMedical();
+  const createPatientMutation = useCreatePatient();
+  
   const [formData, setFormData] = useState({
     name: '',
     age: '',
     gender: '',
+    patientId: '',
     location: ''
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const generatePatientId = () => {
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `PAT-${timestamp}${random}`;
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.age || parseInt(formData.age) < 0 || parseInt(formData.age) > 150) {
-      newErrors.age = 'Valid age is required';
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Patient name is required';
     }
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
-    
+
+    if (!formData.age || parseInt(formData.age) < 0 || parseInt(formData.age) > 150) {
+      newErrors.age = 'Please enter a valid age (0-150)';
+    }
+
+    if (!formData.gender) {
+      newErrors.gender = 'Please select a gender';
+    }
+
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const generatePatientId = () => {
-    return `PAT${Date.now().toString().slice(-6)}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
-    const newPatient: Patient = {
-      id: `patient_${Date.now()}`,
+    const patientData = {
       name: formData.name.trim(),
       age: parseInt(formData.age),
       gender: formData.gender as 'male' | 'female' | 'other',
-      patientId: generatePatientId(),
-      location: formData.location.trim(),
-      createdAt: new Date().toISOString()
+      patientId: formData.patientId || generatePatientId(),
+      location: formData.location.trim()
     };
 
-    dispatch({ type: 'ADD_PATIENT', payload: newPatient });
-    dispatch({ type: 'SET_CURRENT_PATIENT', payload: newPatient });
-    onSubmit(newPatient);
+    try {
+      const newPatient = await createPatientMutation.mutateAsync(patientData);
+      dispatch({ type: 'SET_CURRENT_PATIENT', payload: newPatient });
+      onSubmit(newPatient);
+    } catch (error) {
+      console.error('Error creating patient:', error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   return (
@@ -67,42 +97,51 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl text-center">New Patient Registration</CardTitle>
+          <p className="text-center text-gray-600">
+            Enter patient information to begin assessment
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              {/* Patient Name */}
+              <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Enter patient's full name"
                   className={errors.name ? 'border-red-500' : ''}
                 />
-                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
               </div>
 
-              <div>
+              {/* Age */}
+              <div className="space-y-2">
                 <Label htmlFor="age">Age *</Label>
                 <Input
                   id="age"
                   type="number"
                   value={formData.age}
-                  onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                  placeholder="Age in years"
+                  onChange={(e) => handleInputChange('age', e.target.value)}
+                  placeholder="Enter age"
                   min="0"
                   max="150"
                   className={errors.age ? 'border-red-500' : ''}
                 />
-                {errors.age && <p className="text-sm text-red-500 mt-1">{errors.age}</p>}
+                {errors.age && <p className="text-red-500 text-sm">{errors.age}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              {/* Gender */}
+              <div className="space-y-2">
                 <Label htmlFor="gender">Gender *</Label>
-                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value) => handleInputChange('gender', value)}
+                >
                   <SelectTrigger className={errors.gender ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -112,28 +151,51 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.gender && <p className="text-sm text-red-500 mt-1">{errors.gender}</p>}
+                {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
               </div>
 
-              <div>
-                <Label htmlFor="location">Location *</Label>
+              {/* Patient ID */}
+              <div className="space-y-2">
+                <Label htmlFor="patientId">Patient ID</Label>
                 <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="City, State/Province"
-                  className={errors.location ? 'border-red-500' : ''}
+                  id="patientId"
+                  value={formData.patientId}
+                  onChange={(e) => handleInputChange('patientId', e.target.value)}
+                  placeholder="Auto-generated if empty"
                 />
-                {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
+                <p className="text-sm text-gray-500">Leave empty to auto-generate</p>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel}>
+            {/* Location */}
+            <div className="space-y-2">
+              <Label htmlFor="location">Location/Ward *</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="Enter ward or department"
+                className={errors.location ? 'border-red-500' : ''}
+              />
+              {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onCancel}
+                disabled={createPatientMutation.isPending}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
-                Create Patient & Start Assessment
+              <Button 
+                type="submit"
+                className="bg-teal-600 hover:bg-teal-700"
+                disabled={createPatientMutation.isPending}
+              >
+                {createPatientMutation.isPending ? 'Creating...' : 'Create Patient'}
               </Button>
             </div>
           </form>

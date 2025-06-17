@@ -9,7 +9,248 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          answer_value: Json
+          assessment_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          question_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer_value: Json
+          assessment_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          question_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer_value?: Json
+          assessment_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          question_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          chief_complaint: string
+          created_at: string
+          current_step: number
+          id: string
+          patient_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          chief_complaint: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          patient_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          chief_complaint?: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          patient_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      differential_diagnoses: {
+        Row: {
+          assessment_id: string
+          condition_name: string
+          created_at: string
+          explanation: string | null
+          id: string
+          key_features: Json
+          probability: number
+        }
+        Insert: {
+          assessment_id: string
+          condition_name: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          key_features?: Json
+          probability: number
+        }
+        Update: {
+          assessment_id?: string
+          condition_name?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          key_features?: Json
+          probability?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "differential_diagnoses_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          age: number
+          created_at: string
+          gender: string
+          id: string
+          last_assessment: string | null
+          location: string | null
+          name: string
+          patient_id: string
+          updated_at: string
+        }
+        Insert: {
+          age: number
+          created_at?: string
+          gender: string
+          id?: string
+          last_assessment?: string | null
+          location?: string | null
+          name: string
+          patient_id: string
+          updated_at?: string
+        }
+        Update: {
+          age?: number
+          created_at?: string
+          gender?: string
+          id?: string
+          last_assessment?: string | null
+          location?: string | null
+          name?: string
+          patient_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          assessment_id: string
+          category: string
+          created_at: string
+          id: string
+          options: Json | null
+          order_index: number
+          question_text: string
+          question_type: string
+          required: boolean
+        }
+        Insert: {
+          assessment_id: string
+          category: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index: number
+          question_text: string
+          question_type: string
+          required?: boolean
+        }
+        Update: {
+          assessment_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index?: number
+          question_text?: string
+          question_type?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_of_systems: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          id: string
+          negative_symptoms: Json
+          notes: string | null
+          positive_symptoms: Json
+          system_name: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          id?: string
+          negative_symptoms?: Json
+          notes?: string | null
+          positive_symptoms?: Json
+          system_name: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          id?: string
+          negative_symptoms?: Json
+          notes?: string | null
+          positive_symptoms?: Json
+          system_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_of_systems_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

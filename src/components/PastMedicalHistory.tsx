@@ -1,0 +1,306 @@
+
+// ABOUTME: Component for collecting patient's past medical history
+// ABOUTME: Handles medical conditions, surgeries, medications, and allergies
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { X, Plus } from 'lucide-react';
+
+interface PastMedicalHistoryProps {
+  onSubmit: (data: PastMedicalHistoryData) => void;
+  onBack: () => void;
+}
+
+interface PastMedicalHistoryData {
+  conditions: string[];
+  surgeries: string[];
+  medications: string[];
+  allergies: string[];
+  familyHistory: string;
+  socialHistory: string;
+}
+
+const commonConditions = [
+  'Hypertension', 'Diabetes', 'Asthma', 'Heart Disease', 'Stroke',
+  'Cancer', 'Kidney Disease', 'Liver Disease', 'Depression', 'Anxiety'
+];
+
+export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps) {
+  const [data, setData] = useState<PastMedicalHistoryData>({
+    conditions: [],
+    surgeries: [],
+    medications: [],
+    allergies: [],
+    familyHistory: '',
+    socialHistory: ''
+  });
+
+  const [newItems, setNewItems] = useState({
+    condition: '',
+    surgery: '',
+    medication: '',
+    allergy: ''
+  });
+
+  const addItem = (category: keyof Pick<PastMedicalHistoryData, 'conditions' | 'surgeries' | 'medications' | 'allergies'>, item: string) => {
+    if (item.trim() && !data[category].includes(item.trim())) {
+      setData(prev => ({
+        ...prev,
+        [category]: [...prev[category], item.trim()]
+      }));
+    }
+  };
+
+  const removeItem = (category: keyof Pick<PastMedicalHistoryData, 'conditions' | 'surgeries' | 'medications' | 'allergies'>, item: string) => {
+    setData(prev => ({
+      ...prev,
+      [category]: prev[category].filter(i => i !== item)
+    }));
+  };
+
+  const toggleCondition = (condition: string) => {
+    if (data.conditions.includes(condition)) {
+      removeItem('conditions', condition);
+    } else {
+      addItem('conditions', condition);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(data);
+  };
+
+  return (
+    <div className="p-6">
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Past Medical History</CardTitle>
+          <p className="text-center text-gray-600">
+            Review and document patient's medical background
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Medical Conditions */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium">Medical Conditions</Label>
+              
+              {/* Common conditions checkboxes */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {commonConditions.map((condition) => (
+                  <div key={condition} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={condition}
+                      checked={data.conditions.includes(condition)}
+                      onCheckedChange={() => toggleCondition(condition)}
+                    />
+                    <Label htmlFor={condition} className="text-sm">{condition}</Label>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add custom condition */}
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Add other condition..."
+                  value={newItems.condition}
+                  onChange={(e) => setNewItems(prev => ({ ...prev, condition: e.target.value }))}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addItem('conditions', newItems.condition);
+                      setNewItems(prev => ({ ...prev, condition: '' }));
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    addItem('conditions', newItems.condition);
+                    setNewItems(prev => ({ ...prev, condition: '' }));
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Selected conditions */}
+              <div className="flex flex-wrap gap-2">
+                {data.conditions.map((condition) => (
+                  <Badge key={condition} variant="secondary" className="flex items-center gap-1">
+                    {condition}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeItem('conditions', condition)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Surgeries */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium">Previous Surgeries</Label>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Add surgery/procedure..."
+                  value={newItems.surgery}
+                  onChange={(e) => setNewItems(prev => ({ ...prev, surgery: e.target.value }))}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addItem('surgeries', newItems.surgery);
+                      setNewItems(prev => ({ ...prev, surgery: '' }));
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    addItem('surgeries', newItems.surgery);
+                    setNewItems(prev => ({ ...prev, surgery: '' }));
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {data.surgeries.map((surgery) => (
+                  <Badge key={surgery} variant="secondary" className="flex items-center gap-1">
+                    {surgery}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeItem('surgeries', surgery)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Medications */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium">Current Medications</Label>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Add medication..."
+                  value={newItems.medication}
+                  onChange={(e) => setNewItems(prev => ({ ...prev, medication: e.target.value }))}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addItem('medications', newItems.medication);
+                      setNewItems(prev => ({ ...prev, medication: '' }));
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    addItem('medications', newItems.medication);
+                    setNewItems(prev => ({ ...prev, medication: '' }));
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {data.medications.map((medication) => (
+                  <Badge key={medication} variant="secondary" className="flex items-center gap-1">
+                    {medication}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeItem('medications', medication)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Allergies */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium">Allergies</Label>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Add allergy..."
+                  value={newItems.allergy}
+                  onChange={(e) => setNewItems(prev => ({ ...prev, allergy: e.target.value }))}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addItem('allergies', newItems.allergy);
+                      setNewItems(prev => ({ ...prev, allergy: '' }));
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    addItem('allergies', newItems.allergy);
+                    setNewItems(prev => ({ ...prev, allergy: '' }));
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {data.allergies.map((allergy) => (
+                  <Badge key={allergy} variant="destructive" className="flex items-center gap-1">
+                    {allergy}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeItem('allergies', allergy)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Family History */}
+            <div className="space-y-2">
+              <Label htmlFor="familyHistory" className="text-lg font-medium">Family History</Label>
+              <Textarea
+                id="familyHistory"
+                placeholder="Document relevant family medical history..."
+                value={data.familyHistory}
+                onChange={(e) => setData(prev => ({ ...prev, familyHistory: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* Social History */}
+            <div className="space-y-2">
+              <Label htmlFor="socialHistory" className="text-lg font-medium">Social History</Label>
+              <Textarea
+                id="socialHistory"
+                placeholder="Document smoking, alcohol, occupation, lifestyle factors..."
+                value={data.socialHistory}
+                onChange={(e) => setData(prev => ({ ...prev, socialHistory: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-4">
+              <Button type="button" variant="outline" onClick={onBack}>
+                Back
+              </Button>
+              <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+                Continue to Physical Exam
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
