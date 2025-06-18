@@ -146,13 +146,50 @@ export class AssessmentService {
 
     const answers: Record<string, Answer> = {};
     data.forEach(answer => {
+      // Safely convert Json type to Answer value
+      let answerValue: string | number | boolean;
+      
+      if (typeof answer.answer_value === 'string' || 
+          typeof answer.answer_value === 'number' || 
+          typeof answer.answer_value === 'boolean') {
+        answerValue = answer.answer_value;
+      } else {
+        // Fallback for complex Json values - convert to string
+        answerValue = JSON.stringify(answer.answer_value);
+      }
+
       answers[answer.question_id] = {
         questionId: answer.question_id,
-        value: answer.answer_value,
-        notes: answer.notes
+        value: answerValue,
+        notes: answer.notes || undefined
       };
     });
 
     return answers;
+  }
+
+  static async getAssessment(assessmentId: string): Promise<Assessment | null> {
+    const { data, error } = await supabase
+      .from('assessments')
+      .select('*')
+      .eq('id', assessmentId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching assessment:', error);
+      throw new Error('Failed to fetch assessment');
+    }
+
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      patientId: data.patient_id,
+      chiefComplaint: data.chief_complaint,
+      status: data.status as 'in-progress' | 'completed' | 'draft',
+      currentStep: data.current_step,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 }

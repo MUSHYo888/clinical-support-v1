@@ -14,6 +14,7 @@ export function useCreateAssessment() {
       AssessmentService.createAssessment(patientId, chiefComplaint),
     onSuccess: () => {
       toast.success('Assessment started');
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error) => {
       console.error('Failed to create assessment:', error);
@@ -22,10 +23,39 @@ export function useCreateAssessment() {
   });
 }
 
+export function useAssessment(assessmentId: string) {
+  return useQuery({
+    queryKey: ['assessment', assessmentId],
+    queryFn: () => AssessmentService.getAssessment(assessmentId),
+    enabled: !!assessmentId,
+  });
+}
+
+export function useAssessmentQuestions(assessmentId: string) {
+  return useQuery({
+    queryKey: ['assessment-questions', assessmentId],
+    queryFn: () => AssessmentService.getAssessmentQuestions(assessmentId),
+    enabled: !!assessmentId,
+  });
+}
+
+export function useAssessmentAnswers(assessmentId: string) {
+  return useQuery({
+    queryKey: ['assessment-answers', assessmentId],
+    queryFn: () => AssessmentService.getAssessmentAnswers(assessmentId),
+    enabled: !!assessmentId,
+  });
+}
+
 export function useUpdateAssessmentStep() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ assessmentId, step }: { assessmentId: string; step: number }) =>
       AssessmentService.updateAssessmentStep(assessmentId, step),
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
+    },
     onError: (error) => {
       console.error('Failed to update assessment step:', error);
     },
@@ -33,9 +63,14 @@ export function useUpdateAssessmentStep() {
 }
 
 export function useSaveQuestions() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ assessmentId, questions }: { assessmentId: string; questions: Question[] }) =>
       AssessmentService.saveQuestions(assessmentId, questions),
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment-questions', assessmentId] });
+    },
     onError: (error) => {
       console.error('Failed to save questions:', error);
       toast.error('Failed to save questions');
@@ -44,9 +79,14 @@ export function useSaveQuestions() {
 }
 
 export function useSaveAnswer() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ assessmentId, questionId, answer }: { assessmentId: string; questionId: string; answer: Answer }) =>
       AssessmentService.saveAnswer(assessmentId, questionId, answer),
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment-answers', assessmentId] });
+    },
     onError: (error) => {
       console.error('Failed to save answer:', error);
     },
@@ -54,12 +94,17 @@ export function useSaveAnswer() {
 }
 
 export function useSaveROS() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ assessmentId, systemName, rosData }: { 
       assessmentId: string; 
       systemName: string; 
       rosData: { positive: string[]; negative: string[]; notes?: string } 
     }) => AssessmentService.saveReviewOfSystems(assessmentId, systemName, rosData),
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
+    },
     onError: (error) => {
       console.error('Failed to save ROS data:', error);
       toast.error('Failed to save review of systems');
@@ -68,10 +113,14 @@ export function useSaveROS() {
 }
 
 export function useCompleteAssessment() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (assessmentId: string) => AssessmentService.completeAssessment(assessmentId),
-    onSuccess: () => {
+    onSuccess: (_, assessmentId) => {
       toast.success('Assessment completed successfully');
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error) => {
       console.error('Failed to complete assessment:', error);

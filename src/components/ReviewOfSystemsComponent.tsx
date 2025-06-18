@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useMedical } from '@/context/MedicalContext';
+import { useSaveROS } from '@/hooks/useAssessment';
 import { 
   Eye, Heart, Zap, Activity, Circle, 
   Brain, Bone, Smile, PersonStanding, 
@@ -90,6 +90,7 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
   const { state, dispatch } = useMedical();
   const [selectedSymptoms, setSelectedSymptoms] = useState<Record<string, string[]>>({});
   const [systemNotes, setSystemNotes] = useState<Record<string, string>>({});
+  const saveROSMutation = useSaveROS();
 
   const toggleSymptom = (systemName: string, symptom: string) => {
     setSelectedSymptoms(prev => {
@@ -106,7 +107,7 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
     setSystemNotes(prev => ({ ...prev, [systemName]: notes }));
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     // Update context with ROS data
     Object.keys(selectedSymptoms).forEach(systemName => {
       dispatch({
@@ -121,6 +122,28 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
         }
       });
     });
+
+    // Save ROS data to database
+    if (state.currentAssessment) {
+      try {
+        const savePromises = Object.keys(selectedSymptoms).map(systemName => 
+          saveROSMutation.mutateAsync({
+            assessmentId: state.currentAssessment!.id,
+            systemName,
+            rosData: {
+              positive: selectedSymptoms[systemName] || [],
+              negative: [],
+              notes: systemNotes[systemName]
+            }
+          })
+        );
+        
+        await Promise.all(savePromises);
+        console.log('ROS data saved to database');
+      } catch (error) {
+        console.error('Failed to save ROS data:', error);
+      }
+    }
 
     onComplete();
   };

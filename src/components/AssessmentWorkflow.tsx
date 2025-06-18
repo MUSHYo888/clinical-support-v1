@@ -9,6 +9,7 @@ import { Question } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
 import { QuestionComponent } from './QuestionComponent';
 import { ReviewOfSystemsComponent } from './ReviewOfSystemsComponent';
+import { useSaveQuestions, useSaveAnswer, useUpdateAssessmentStep } from '@/hooks/useAssessment';
 
 interface AssessmentWorkflowProps {
   chiefComplaint: string;
@@ -23,6 +24,11 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showROS, setShowROS] = useState(false);
+  const [questionsGenerated, setQuestionsGenerated] = useState(false);
+
+  const saveQuestionsMutation = useSaveQuestions();
+  const saveAnswerMutation = useSaveAnswer();
+  const updateStepMutation = useUpdateAssessmentStep();
 
   const steps = [
     'History of Present Illness',
@@ -40,9 +46,21 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
     try {
       setLoading(true);
       setError(null);
+      
       const generatedQuestions = await AIService.generateQuestions(chiefComplaint);
       setQuestions(generatedQuestions);
+      
+      // Save questions to database if we have a current assessment
+      if (state.currentAssessment && !questionsGenerated) {
+        console.log('Saving questions to database for assessment:', state.currentAssessment.id);
+        await saveQuestionsMutation.mutateAsync({
+          assessmentId: state.currentAssessment.id,
+          questions: generatedQuestions
+        });
+        setQuestionsGenerated(true);
+      }
     } catch (err) {
+      console.error('Error loading questions:', err);
       setError('Failed to load questions. Using fallback questions.');
       // Fallback questions would be loaded here
     } finally {
@@ -50,7 +68,8 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
     }
   };
 
-  const handleAnswerSubmit = (questionId: string, answer: any) => {
+  const handleAnswerSubmit = async (questionId: string, answer: any) => {
+    // Save to context
     dispatch({
       type: 'ADD_ANSWER',
       payload: {
@@ -63,16 +82,52 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
       }
     });
 
+    // Save to database
+    if (state.currentAssessment) {
+      try {
+        await saveAnswerMutation.mutateAsync({
+          assessmentId: state.currentAssessment.id,
+          questionId,
+          answer: {
+            questionId,
+            value: answer.value,
+            notes: answer.notes
+          }
+        });
+        console.log('Answer saved to database');
+      } catch (error) {
+        console.error('Failed to save answer to database:', error);
+      }
+    }
+
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
+      // Move to ROS
       setShowROS(true);
       dispatch({ type: 'SET_STEP', payload: 2 });
+      
+      // Update assessment step in database
+      if (state.currentAssessment) {
+        await updateStepMutation.mutateAsync({
+          assessmentId: state.currentAssessment.id,
+          step: 2
+        });
+      }
     }
   };
 
-  const handleROSComplete = () => {
+  const handleROSComplete = async () => {
     dispatch({ type: 'SET_STEP', payload: 3 });
+    
+    // Update assessment step in database
+    if (state.currentAssessment) {
+      await updateStepMutation.mutateAsync({
+        assessmentId: state.currentAssessment.id,
+        step: 3
+      });
+    }
+    
     onComplete();
   };
 
