@@ -39,13 +39,13 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
       console.log('Generating differential diagnosis with data:', {
         chiefComplaint,
         answers: state.answers,
-        rosData: state.reviewOfSystems
+        rosData: state.rosData
       });
 
       const differentialDiagnoses = await AIService.generateDifferentialDiagnosis(
         chiefComplaint,
         state.answers,
-        state.reviewOfSystems
+        state.rosData
       );
 
       setDifferentials(differentialDiagnoses);
@@ -120,7 +120,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
 
         <CardContent className="space-y-6">
           {/* Assessment Data Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="border-l-4 border-l-blue-500">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -139,9 +139,22 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
                   <span className="font-medium">Review of Systems</span>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  {Object.keys(state.reviewOfSystems).length}
+                  {Object.keys(state.rosData).length}
                 </p>
                 <p className="text-sm text-gray-600">Systems reviewed</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium">Past Medical History</span>
+                </div>
+                <p className="text-2xl font-bold text-orange-600">
+                  {state.pmhData ? 'Complete' : 'Pending'}
+                </p>
+                <p className="text-sm text-gray-600">Medical history</p>
               </CardContent>
             </Card>
 
@@ -156,6 +169,78 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
               </CardContent>
             </Card>
           </div>
+
+          {/* Past Medical History Summary */}
+          {state.pmhData && (
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Past Medical History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium mb-2">Medical Conditions</h5>
+                    <ul className="text-sm space-y-1">
+                      {state.pmhData.conditions.map((condition, idx) => (
+                        <li key={idx}>• {condition}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium mb-2">Current Medications</h5>
+                    <ul className="text-sm space-y-1">
+                      {state.pmhData.medications.map((medication, idx) => (
+                        <li key={idx}>• {medication}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Physical Examination Summary */}
+          {state.peData && (
+            <Card className="border-l-4 border-l-teal-500">
+              <CardHeader>
+                <CardTitle className="text-lg">Physical Examination</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="font-medium mb-2">Vital Signs</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                      <div>BP: {state.peData.vitalSigns.bloodPressure}</div>
+                      <div>HR: {state.peData.vitalSigns.heartRate}</div>
+                      <div>RR: {state.peData.vitalSigns.respiratoryRate}</div>
+                      <div>Temp: {state.peData.vitalSigns.temperature}</div>
+                      <div>O2: {state.peData.vitalSigns.oxygenSaturation}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium mb-2">System Examination</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(state.peData.systems).map(([system, findings]) => (
+                        <div key={system} className="text-sm">
+                          <span className="font-medium">{system}:</span>
+                          {findings.normal ? (
+                            <span className="text-green-600 ml-2">Normal</span>
+                          ) : (
+                            <div className="ml-2">
+                              {findings.findings.map((finding, idx) => (
+                                <div key={idx}>• {finding}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Differential Diagnoses */}
           <div>
@@ -207,7 +292,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
           {/* Action Buttons */}
           <div className="flex justify-between pt-6 border-t">
             <Button variant="outline" onClick={onBack}>
-              Back to Review of Systems
+              Back to Physical Exam
             </Button>
             
             <div className="space-x-3">

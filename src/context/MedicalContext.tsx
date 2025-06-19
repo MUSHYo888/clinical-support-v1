@@ -37,8 +37,10 @@ interface MedicalState {
   currentStep: number;
   answers: Record<string, Answer>;
   rosData: ReviewOfSystems;
+  reviewOfSystems: ReviewOfSystems;
   pmhData: PastMedicalHistoryData | null;
   peData: PhysicalExamData | null;
+  patients: Patient[];
 }
 
 type MedicalAction =
@@ -47,8 +49,10 @@ type MedicalAction =
   | { type: 'SET_STEP'; payload: number }
   | { type: 'ADD_ANSWER'; payload: { questionId: string; answer: Answer } }
   | { type: 'SET_ROS_DATA'; payload: ReviewOfSystems }
+  | { type: 'UPDATE_ROS'; payload: { system: string; data: any } }
   | { type: 'SET_PMH_DATA'; payload: PastMedicalHistoryData }
   | { type: 'SET_PE_DATA'; payload: PhysicalExamData }
+  | { type: 'ADD_PATIENT'; payload: Patient }
   | { type: 'RESET_ASSESSMENT' };
 
 const initialState: MedicalState = {
@@ -57,8 +61,10 @@ const initialState: MedicalState = {
   currentStep: 1,
   answers: {},
   rosData: {},
+  reviewOfSystems: {},
   pmhData: null,
-  peData: null
+  peData: null,
+  patients: []
 };
 
 function medicalReducer(state: MedicalState, action: MedicalAction): MedicalState {
@@ -82,7 +88,24 @@ function medicalReducer(state: MedicalState, action: MedicalAction): MedicalStat
       };
     
     case 'SET_ROS_DATA':
-      return { ...state, rosData: action.payload };
+      return { 
+        ...state, 
+        rosData: action.payload,
+        reviewOfSystems: action.payload
+      };
+    
+    case 'UPDATE_ROS':
+      return {
+        ...state,
+        rosData: {
+          ...state.rosData,
+          [action.payload.system]: action.payload.data
+        },
+        reviewOfSystems: {
+          ...state.reviewOfSystems,
+          [action.payload.system]: action.payload.data
+        }
+      };
     
     case 'SET_PMH_DATA':
       return { ...state, pmhData: action.payload };
@@ -90,10 +113,17 @@ function medicalReducer(state: MedicalState, action: MedicalAction): MedicalStat
     case 'SET_PE_DATA':
       return { ...state, peData: action.payload };
     
+    case 'ADD_PATIENT':
+      return { 
+        ...state, 
+        patients: [...state.patients, action.payload] 
+      };
+    
     case 'RESET_ASSESSMENT':
       return {
         ...initialState,
-        currentPatient: state.currentPatient
+        currentPatient: state.currentPatient,
+        patients: state.patients
       };
     
     default:

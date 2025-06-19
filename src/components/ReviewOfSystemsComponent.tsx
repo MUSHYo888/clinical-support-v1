@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,19 +109,21 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
   };
 
   const handleComplete = async () => {
-    // Update context with ROS data
+    // Prepare ROS data for context update
+    const rosDataForContext: Record<string, any> = {};
+    
     Object.keys(selectedSymptoms).forEach(systemName => {
-      dispatch({
-        type: 'UPDATE_ROS',
-        payload: {
-          system: systemName,
-          data: {
-            positive: selectedSymptoms[systemName] || [],
-            negative: [], // Could track explicitly denied symptoms
-            notes: systemNotes[systemName]
-          }
-        }
-      });
+      rosDataForContext[systemName] = {
+        positive: selectedSymptoms[systemName] || [],
+        negative: [], // Could track explicitly denied symptoms
+        notes: systemNotes[systemName]
+      };
+    });
+
+    // Update context with ROS data
+    dispatch({
+      type: 'SET_ROS_DATA',
+      payload: rosDataForContext
     });
 
     // Save ROS data to database
