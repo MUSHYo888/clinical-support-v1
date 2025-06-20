@@ -1,7 +1,9 @@
+
 // ABOUTME: AI service for clinical question generation and differential diagnosis
 // ABOUTME: Uses OpenRouter API through Supabase Edge Functions for real AI capabilities
 import { supabase } from '@/integrations/supabase/client';
-import { Question, DifferentialDiagnosis, AdvancedClinicalSupport } from '@/types/medical';
+import { Question, DifferentialDiagnosis } from '@/types/medical';
+import { AdvancedClinicalSupport } from '@/types/clinical-scores';
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
 
 export class AIService {
