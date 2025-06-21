@@ -14,7 +14,7 @@ export class ContraindicationChecker {
     medicalHistory: string[] = []
   ): ContraindicationCheck {
     const contraindicationDatabase = InvestigationDatabaseService.getContraindicationDatabase();
-    const contraData = contraindicationDatabase[investigationI   ` || { absolute: [], relative: [], warnings: [] };
+    const contraData = contraindicationDatabase[investigationId] || { absolute: [], relative: [], warnings: [] };
     
     const detectedContraindications = this.detectContraindications(contraData, patientData, medicalHistory);
     const alternativesDb = InvestigationDatabaseService.getAlternativesDatabase();
