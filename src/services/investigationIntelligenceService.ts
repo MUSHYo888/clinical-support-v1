@@ -1,4 +1,3 @@
-
 // ABOUTME: Enhanced investigation intelligence service for cost-benefit analysis and evidence-based pathways
 // ABOUTME: Provides contraindication checking and follow-up algorithms for clinical investigations
 
@@ -294,10 +293,10 @@ export class InvestigationIntelligenceService {
 
   private static calculateDiagnosticYield(investigationId: string, patientData: any): number {
     // Simplified diagnostic yield calculation
-    const yieldScores: Record<string, number> = {
+    const diagnosticYieldScores: Record<string, number> = {
       'ecg': 85, 'troponin': 75, 'fbc': 60, 'tft': 70, 'chest-xray': 65, 'ct-chest': 90
     };
-    return yieldScores[investigationId] || 70;
+    return diagnosticYieldScores[investigationId] || 70;
   }
 
   private static hasAlternatives(investigationId: string): boolean {
@@ -307,9 +306,9 @@ export class InvestigationIntelligenceService {
     return alternatives[investigationId] || false;
   }
 
-  private static generateCostJustification(id: string, benefit: number, yield: number): string {
-    if (benefit >= 8 && yield >= 80) return 'High clinical benefit with excellent diagnostic yield justifies cost';
-    if (benefit >= 6 && yield >= 60) return 'Moderate benefit-cost ratio, clinically justified';
+  private static generateCostJustification(id: string, benefit: number, diagnosticYield: number): string {
+    if (benefit >= 8 && diagnosticYield >= 80) return 'High clinical benefit with excellent diagnostic yield justifies cost';
+    if (benefit >= 6 && diagnosticYield >= 60) return 'Moderate benefit-cost ratio, clinically justified';
     return 'Consider alternatives due to lower cost-effectiveness ratio';
   }
 
