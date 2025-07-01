@@ -1,4 +1,3 @@
-
 // ABOUTME: Service for managing clinical reports and documentation
 // ABOUTME: Handles CRUD operations for reports, SOAP notes, referral letters, and progress notes
 
@@ -36,7 +35,7 @@ export class ClinicalReportService {
       assessmentId: data.assessment_id,
       reportType: data.report_type as 'clinical_summary' | 'investigation_summary' | 'treatment_plan' | 'discharge_summary',
       title: data.title,
-      content: data.content as ReportContent,
+      content: data.content as unknown as ReportContent,
       generatedAt: data.generated_at,
       generatedBy: data.generated_by,
       format: data.format as 'pdf' | 'html' | 'docx',
@@ -80,7 +79,7 @@ export class ClinicalReportService {
       relevantHistory: data.relevant_history,
       examinationFindings: data.examination_findings,
       investigationsCompleted: data.investigations_completed,
-      letterContent: data.letter_content as ReferralLetterContent,
+      letterContent: data.letter_content as unknown as ReferralLetterContent,
       createdAt: data.created_at,
       sentAt: data.sent_at,
       status: data.status as 'draft' | 'sent' | 'acknowledged'
@@ -199,7 +198,7 @@ export class ClinicalReportService {
       assessmentId: report.assessment_id,
       reportType: report.report_type as 'clinical_summary' | 'investigation_summary' | 'treatment_plan' | 'discharge_summary',
       title: report.title,
-      content: report.content as ReportContent,
+      content: report.content as unknown as ReportContent,
       generatedAt: report.generated_at,
       generatedBy: report.generated_by,
       format: report.format as 'pdf' | 'html' | 'docx',
