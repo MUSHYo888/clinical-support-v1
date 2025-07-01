@@ -1,5 +1,5 @@
-// ABOUTME: Enhanced investigation intelligence service for cost-benefit analysis and evidence-based pathways
-// ABOUTME: Provides contraindication checking and follow-up algorithms for clinical investigations
+// ABOUTME: Enhanced investigation intelligence service with AI integration
+// ABOUTME: Provides comprehensive investigation analysis using enhanced database and AI services
 
 import { 
   CostBenefitAnalysis, 
@@ -9,6 +9,9 @@ import {
   InvestigationIntelligence,
   InvestigationRecommendation
 } from '@/types/investigation-intelligence';
+import { InvestigationDatabaseService } from './investigation/InvestigationDatabaseService';
+import { CostBenefitAnalyzer } from './investigation/CostBenefitAnalyzer';
+import { ContraindicationChecker } from './investigation/ContraindicationChecker';
 
 export class InvestigationIntelligenceService {
   
@@ -17,126 +20,27 @@ export class InvestigationIntelligenceService {
     patientData: any,
     clinicalContext: any
   ): CostBenefitAnalysis {
-    // Cost database - in real implementation, this would come from healthcare pricing databases
-    const costDatabase: Record<string, any> = {
-      'ecg': { cost: 50, category: 'very-low', diagnosticYield: 85 },
-      'troponin': { cost: 120, category: 'low', diagnosticYield: 75 },
-      'fbc': { cost: 30, category: 'very-low', diagnosticYield: 60 },
-      'tft': { cost: 80, category: 'low', diagnosticYield: 70 },
-      'chest-xray': { cost: 150, category: 'low', diagnosticYield: 65 },
-      'ct-chest': { cost: 800, category: 'high', diagnosticYield: 90 },
-      'mri-brain': { cost: 1200, category: 'very-high', diagnosticYield: 95 },
-      'echo': { cost: 300, category: 'moderate', diagnosticYield: 80 }
-    };
-
-    const costData = costDatabase[investigationId] || { cost: 200, category: 'moderate', diagnosticYield: 70 };
-    
-    // Calculate clinical benefit based on patient presentation
-    const clinicalBenefit = this.calculateClinicalBenefit(investigationId, patientData, clinicalContext);
-    
-    // Calculate diagnostic yield based on pretest probability
-    const diagnosticYield = this.calculateDiagnosticYield(investigationId, patientData);
-    
-    return {
-      investigationId,
-      estimatedCost: costData.cost,
-      currency: 'USD',
-      costCategory: costData.category,
-      clinicalBenefit,
-      diagnosticYield,
-      costEffectivenessRatio: costData.cost / diagnosticYield,
-      alternativesAvailable: this.hasAlternatives(investigationId),
-      justification: this.generateCostJustification(investigationId, clinicalBenefit, diagnosticYield)
-    };
+    return CostBenefitAnalyzer.analyzeCostBenefit(investigationId, patientData, clinicalContext);
   }
 
   static getEvidenceBasedPathway(
     chiefComplaint: string,
     differentialDiagnoses: any[]
   ): EvidenceBasedPathway {
-    const pathways: Record<string, EvidenceBasedPathway> = {
-      'chest pain': {
-        pathwayId: 'chest-pain-pathway',
-        name: 'Chest Pain Evaluation Pathway',
-        condition: 'Chest Pain',
-        evidenceLevel: 'A',
-        guidelineSource: 'AHA/ACC 2021 Chest Pain Guidelines',
-        steps: [
-          {
-            stepNumber: 1,
-            investigationType: 'cardiac',
-            investigationName: 'ECG',
-            timing: 'immediate',
-            prerequisites: [],
-            expectedOutcomes: ['Rule out STEMI', 'Detect arrhythmias'],
-            nextStepCriteria: 'If normal ECG and ongoing chest pain'
-          },
-          {
-            stepNumber: 2,
-            investigationType: 'laboratory',
-            investigationName: 'Troponin',
-            timing: 'immediate',
-            prerequisites: ['ECG completed'],
-            expectedOutcomes: ['Detect myocardial injury'],
-            nextStepCriteria: 'If troponin negative, consider stress testing'
-          }
-        ],
-        decisionPoints: [
-          {
-            pointId: 'troponin-decision',
-            condition: 'Troponin result',
-            ifPositive: 'Acute coronary syndrome pathway',
-            ifNegative: 'Consider stress testing or CT coronary angiography',
-            ifInconclusive: 'Repeat troponin in 3-6 hours',
-            clinicalAction: 'Cardiology consultation if positive'
-          }
-        ],
-        estimatedTimeframe: '2-4 hours for initial workup',
-        successRate: 95
-      },
-      'fatigue': {
-        pathwayId: 'fatigue-pathway',
-        name: 'Fatigue Investigation Pathway',
-        condition: 'Fatigue',
-        evidenceLevel: 'B',
-        guidelineSource: 'NICE Clinical Knowledge Summary',
-        steps: [
-          {
-            stepNumber: 1,
-            investigationType: 'laboratory',
-            investigationName: 'Full Blood Count',
-            timing: 'routine',
-            prerequisites: [],
-            expectedOutcomes: ['Screen for anemia', 'Detect infection'],
-            nextStepCriteria: 'If normal, proceed to step 2'
-          },
-          {
-            stepNumber: 2,
-            investigationType: 'laboratory',
-            investigationName: 'Thyroid Function Tests',
-            timing: 'routine',
-            prerequisites: ['FBC completed'],
-            expectedOutcomes: ['Rule out thyroid dysfunction'],
-            nextStepCriteria: 'If abnormal, endocrine referral'
-          }
-        ],
-        decisionPoints: [
-          {
-            pointId: 'anemia-decision',
-            condition: 'Hemoglobin level',
-            ifPositive: 'Iron studies and B12/folate',
-            ifNegative: 'Continue with thyroid function',
-            ifInconclusive: 'Repeat in 4-6 weeks',
-            clinicalAction: 'Treat underlying cause if identified'
-          }
-        ],
-        estimatedTimeframe: '1-2 weeks for results',
-        successRate: 80
-      }
-    };
-
+    const protocols = InvestigationDatabaseService.getEvidenceBasedProtocols();
     const complaint = chiefComplaint.toLowerCase();
-    return pathways[complaint] || pathways['fatigue'];
+    
+    // Find matching protocol
+    if (complaint.includes('chest pain') || complaint.includes('chest')) {
+      return this.createPathwayFromProtocol(protocols['chest-pain'], 'chest-pain');
+    } else if (complaint.includes('fatigue') || complaint.includes('tired')) {
+      return this.createPathwayFromProtocol(protocols['fatigue'], 'fatigue');
+    } else if (complaint.includes('shortness') || complaint.includes('breathless')) {
+      return this.createPathwayFromProtocol(protocols['shortness-of-breath'], 'shortness-of-breath');
+    }
+    
+    // Default pathway
+    return this.getDefaultPathway(chiefComplaint);
   }
 
   static checkContraindications(
@@ -146,44 +50,13 @@ export class InvestigationIntelligenceService {
     allergies: string[] = [],
     medicalHistory: string[] = []
   ): ContraindicationCheck {
-    const contraindicationDatabase: Record<string, any> = {
-      'ct-contrast': {
-        absolute: ['Severe renal impairment (eGFR <30)', 'Previous severe contrast reaction'],
-        relative: ['Mild renal impairment', 'Diabetes with metformin', 'Pregnancy'],
-        warnings: [
-          { category: 'renal', description: 'Risk of contrast-induced nephropathy', riskLevel: 'moderate' },
-          { category: 'allergy', description: 'Risk of allergic reaction', riskLevel: 'low' }
-        ]
-      },
-      'mri': {
-        absolute: ['Pacemaker (non-MRI compatible)', 'Cochlear implants', 'Metallic foreign bodies in eyes'],
-        relative: ['Claustrophobia', 'Pregnancy (first trimester)'],
-        warnings: [
-          { category: 'other', description: 'Metallic implants may cause artifacts', riskLevel: 'low' }
-        ]
-      },
-      'exercise-stress-test': {
-        absolute: ['Unstable angina', 'Recent MI (<48 hours)', 'Severe aortic stenosis'],
-        relative: ['Uncontrolled hypertension', 'Severe heart failure'],
-        warnings: [
-          { category: 'cardiac', description: 'Risk of cardiac events during stress', riskLevel: 'moderate' }
-        ]
-      }
-    };
-
-    const contraData = contraindicationDatabase[investigationId] || { absolute: [], relative: [], warnings: [] };
-    
-    // Check for contraindications based on patient data
-    const detectedContraindications = this.detectContraindications(contraData, patientData, medicalHistory);
-    
-    return {
+    return ContraindicationChecker.checkContraindications(
       investigationId,
-      contraindications: detectedContraindications.contraindications,
-      warnings: detectedContraindications.warnings,
-      precautions: detectedContraindications.precautions,
-      riskAssessment: detectedContraindications.riskLevel,
-      alternativeRecommendations: this.getAlternativeInvestigations(investigationId)
-    };
+      patientData,
+      medications,
+      allergies,
+      medicalHistory
+    );
   }
 
   static generateFollowUpAlgorithm(investigationId: string): FollowUpAlgorithm {
@@ -283,51 +156,90 @@ export class InvestigationIntelligenceService {
   }
 
   // Helper methods
-  private static calculateClinicalBenefit(investigationId: string, patientData: any, context: any): number {
-    // Simplified clinical benefit calculation
-    const benefitScores: Record<string, number> = {
-      'ecg': 9, 'troponin': 8, 'fbc': 6, 'tft': 7, 'chest-xray': 7, 'ct-chest': 9, 'mri-brain': 9
-    };
-    return benefitScores[investigationId] || 6;
-  }
-
-  private static calculateDiagnosticYield(investigationId: string, patientData: any): number {
-    // Simplified diagnostic yield calculation
-    const diagnosticYieldScores: Record<string, number> = {
-      'ecg': 85, 'troponin': 75, 'fbc': 60, 'tft': 70, 'chest-xray': 65, 'ct-chest': 90
-    };
-    return diagnosticYieldScores[investigationId] || 70;
-  }
-
-  private static hasAlternatives(investigationId: string): boolean {
-    const alternatives: Record<string, boolean> = {
-      'ct-chest': true, 'mri-brain': true, 'echo': true, 'stress-test': true
-    };
-    return alternatives[investigationId] || false;
-  }
-
-  private static generateCostJustification(id: string, benefit: number, diagnosticYield: number): string {
-    if (benefit >= 8 && diagnosticYield >= 80) return 'High clinical benefit with excellent diagnostic yield justifies cost';
-    if (benefit >= 6 && diagnosticYield >= 60) return 'Moderate benefit-cost ratio, clinically justified';
-    return 'Consider alternatives due to lower cost-effectiveness ratio';
-  }
-
-  private static detectContraindications(contraData: any, patientData: any, history: string[]): any {
+  private static createPathwayFromProtocol(protocol: any, pathwayId: string): EvidenceBasedPathway {
     return {
-      contraindications: [],
-      warnings: contraData.warnings || [],
-      precautions: [],
-      riskLevel: 'low' as const
+      pathwayId,
+      name: protocol.name,
+      condition: pathwayId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+      evidenceLevel: protocol.evidenceLevel,
+      guidelineSource: protocol.source,
+      steps: protocol.investigations.map((inv: any, index: number) => ({
+        stepNumber: index + 1,
+        investigationType: this.getInvestigationType(inv.name),
+        investigationName: inv.name,
+        timing: inv.timing,
+        prerequisites: index > 0 ? [protocol.investigations[index - 1].name] : [],
+        expectedOutcomes: this.getExpectedOutcomes(inv.name),
+        nextStepCriteria: this.getNextStepCriteria(inv.name)
+      })),
+      decisionPoints: [
+        {
+          pointId: `${pathwayId}-decision-1`,
+          condition: 'Initial investigation results',
+          ifPositive: 'Proceed with urgent pathway',
+          ifNegative: 'Continue with routine investigations',
+          ifInconclusive: 'Repeat or consider alternative investigations',
+          clinicalAction: 'Clinical correlation required'
+        }
+      ],
+      estimatedTimeframe: this.estimateTimeframe(protocol.investigations),
+      successRate: 85
     };
   }
 
-  private static getAlternativeInvestigations(investigationId: string): string[] {
-    const alternatives: Record<string, string[]> = {
-      'ct-chest': ['Chest X-ray', 'MRI chest', 'Ultrasound'],
-      'mri-brain': ['CT brain', 'Ultrasound (if applicable)'],
-      'stress-test': ['Echocardiogram', 'CT coronary angiography']
+  private static getDefaultPathway(chiefComplaint: string): EvidenceBasedPathway {
+    return {
+      pathwayId: 'general-pathway',
+      name: 'General Investigation Pathway',
+      condition: chiefComplaint,
+      evidenceLevel: 'C',
+      guidelineSource: 'Clinical Best Practice',
+      steps: [
+        {
+          stepNumber: 1,
+          investigationType: 'laboratory',
+          investigationName: 'Basic Blood Tests',
+          timing: 'routine',
+          prerequisites: [],
+          expectedOutcomes: ['Screen for common abnormalities'],
+          nextStepCriteria: 'Based on clinical presentation'
+        }
+      ],
+      decisionPoints: [],
+      estimatedTimeframe: '1-2 days',
+      successRate: 70
     };
-    return alternatives[investigationId] || [];
+  }
+
+  private static getInvestigationType(name: string): string {
+    if (name.includes('X-ray') || name.includes('CT') || name.includes('MRI')) return 'imaging';
+    if (name.includes('ECG') || name.includes('Echo')) return 'cardiac';
+    return 'laboratory';
+  }
+
+  private static getExpectedOutcomes(investigationName: string): string[] {
+    const outcomes: Record<string, string[]> = {
+      'FBC': ['Rule out anemia', 'Detect infection', 'Screen for blood disorders'],
+      'Troponin': ['Detect myocardial injury', 'Rule out MI'],
+      'ECG': ['Assess rhythm', 'Detect ischemia', 'Rule out arrhythmias'],
+      'TFT': ['Rule out thyroid dysfunction'],
+      'BNP': ['Assess for heart failure']
+    };
+    
+    for (const [key, outcome] of Object.entries(outcomes)) {
+      if (investigationName.includes(key)) return outcome;
+    }
+    return ['Investigate clinical presentation'];
+  }
+
+  private static getNextStepCriteria(investigationName: string): string {
+    return `Based on ${investigationName} results and clinical correlation`;
+  }
+
+  private static estimateTimeframe(investigations: any[]): string {
+    const urgentCount = investigations.filter(inv => inv.timing === 'immediate' || inv.timing === 'urgent').length;
+    if (urgentCount > 0) return '2-6 hours for urgent investigations';
+    return '1-2 days for routine investigations';
   }
 
   private static getDefaultFollowUpAlgorithm(investigationId: string): FollowUpAlgorithm {

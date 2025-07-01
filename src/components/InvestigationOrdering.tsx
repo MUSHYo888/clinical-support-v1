@@ -1,6 +1,7 @@
 
-// ABOUTME: Investigation ordering component with AI-powered recommendations
-// ABOUTME: Provides structured investigation selection with clinical rationale and decision support
+// ABOUTME: Investigation ordering component with AI-powered recommendations and cost-benefit analysis
+// ABOUTME: Provides intelligent investigation selection with clinical rationale and safety checks
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { 
   Beaker, 
   Scan, 
@@ -19,10 +21,12 @@ import {
   DollarSign,
   Brain,
   CheckCircle2,
-  Info
+  Info,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
-import { InvestigationRecommendation, RedFlag, ClinicalGuideline } from '@/types/medical';
-import { AIService } from '@/services/aiService';
+import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
+import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
 
 interface InvestigationOrderingProps {
   chiefComplaint: string;
@@ -41,107 +45,45 @@ export function InvestigationOrdering({
   onSubmit,
   onBack
 }: InvestigationOrderingProps) {
-  const [recommendations, setRecommendations] = useState<InvestigationRecommendation[]>([]);
-  const [redFlags, setRedFlags] = useState<RedFlag[]>([]);
-  const [guidelines, setGuidelines] = useState<ClinicalGuideline[]>([]);
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
   const [clinicalNotes, setClinicalNotes] = useState('');
+  const [investigationIntelligence, setInvestigationIntelligence] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    generateRecommendations();
-  }, []);
+  const {
+    recommendations,
+    redFlags,
+    guidelines,
+    loading: aiLoading,
+    error: aiError
+  } = useInvestigationRecommendations(chiefComplaint, differentialDiagnoses, answers, rosData);
 
-  const generateRecommendations = async () => {
+  useEffect(() => {
+    generateInvestigationIntelligence();
+  }, [recommendations]);
+
+  const generateInvestigationIntelligence = async () => {
     try {
       setLoading(true);
       
-      // Generate AI-powered investigation recommendations
-      const clinicalSupport = await AIService.generateClinicalDecisionSupport(
-        chiefComplaint,
-        differentialDiagnoses,
-        answers,
-        rosData
+      const intelligenceData = await Promise.all(
+        recommendations.map(async (rec) => {
+          const intelligence = InvestigationIntelligenceService.generateInvestigationIntelligence(
+            rec.investigation.id,
+            chiefComplaint,
+            { answers, rosData },
+            differentialDiagnoses
+          );
+          return { ...rec, intelligence };
+        })
       );
       
-      setRecommendations(clinicalSupport.investigations);
-      setRedFlags(clinicalSupport.redFlags);
-      setGuidelines(clinicalSupport.guidelines);
+      setInvestigationIntelligence(intelligenceData);
     } catch (error) {
-      console.error('Failed to generate recommendations:', error);
-      // Use fallback recommendations
-      setRecommendations(getFallbackRecommendations());
+      console.error('Failed to generate investigation intelligence:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getFallbackRecommendations = (): InvestigationRecommendation[] => {
-    const fallbackByComplaint: Record<string, InvestigationRecommendation[]> = {
-      'chest pain': [
-        {
-          investigation: {
-            id: 'ecg',
-            name: 'ECG',
-            type: 'cardiac',
-            category: 'Cardiac',
-            indication: 'Rule out acute coronary syndrome',
-            urgency: 'stat',
-            cost: 'low',
-            rationale: 'Essential for detecting acute ST changes or arrhythmias'
-          },
-          priority: 1,
-          clinicalRationale: 'First-line investigation for chest pain to rule out MI'
-        },
-        {
-          investigation: {
-            id: 'troponin',
-            name: 'Troponin T/I',
-            type: 'laboratory',
-            category: 'Cardiac Markers',
-            indication: 'Detect myocardial injury',
-            urgency: 'stat',
-            cost: 'moderate',
-            rationale: 'Gold standard for myocardial injury detection'
-          },
-          priority: 2,
-          clinicalRationale: 'Elevated troponin indicates myocardial injury'
-        }
-      ],
-      'fatigue': [
-        {
-          investigation: {
-            id: 'fbc',
-            name: 'Full Blood Count',
-            type: 'laboratory',
-            category: 'Hematology',
-            indication: 'Screen for anemia, infection',
-            urgency: 'routine',
-            cost: 'low',
-            rationale: 'Common cause of fatigue is anemia'
-          },
-          priority: 1,
-          clinicalRationale: 'Anemia is a common reversible cause of fatigue'
-        },
-        {
-          investigation: {
-            id: 'tft',
-            name: 'Thyroid Function Tests',
-            type: 'laboratory',
-            category: 'Endocrine',
-            indication: 'Rule out thyroid dysfunction',
-            urgency: 'routine',
-            cost: 'moderate',
-            rationale: 'Thyroid disorders commonly present with fatigue'
-          },
-          priority: 2,
-          clinicalRationale: 'Both hypo- and hyperthyroidism can cause fatigue'
-        }
-      ]
-    };
-
-    const complaint = chiefComplaint.toLowerCase();
-    return fallbackByComplaint[complaint] || fallbackByComplaint['fatigue'];
   };
 
   const getInvestigationIcon = (type: string) => {
@@ -154,21 +96,25 @@ export function InvestigationOrdering({
     }
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'stat': return 'bg-red-500';
-      case 'urgent': return 'bg-orange-500';
-      case 'routine': return 'bg-green-500';
-      default: return 'bg-gray-500';
+  const getCostColor = (category: string) => {
+    switch (category) {
+      case 'very-low': return 'text-green-600';
+      case 'low': return 'text-green-500';
+      case 'moderate': return 'text-yellow-600';
+      case 'high': return 'text-orange-600';
+      case 'very-high': return 'text-red-600';
+      default: return 'text-gray-600';
     }
   };
 
-  const getCostColor = (cost: string) => {
-    switch (cost) {
-      case 'low': return 'text-green-600';
-      case 'moderate': return 'text-yellow-600';
-      case 'high': return 'text-red-600';
-      default: return 'text-gray-600';
+  const getRecommendationColor = (recommendation: string) => {
+    switch (recommendation) {
+      case 'strongly-recommended': return 'bg-green-100 text-green-800 border-green-200';
+      case 'recommended': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'consider': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'not-recommended': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'contraindicated': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -184,15 +130,15 @@ export function InvestigationOrdering({
     onSubmit(selectedInvestigations, clinicalNotes);
   };
 
-  if (loading) {
+  if (aiLoading || loading) {
     return (
       <div className="p-6">
         <Card className="max-w-4xl mx-auto">
           <CardContent className="flex items-center justify-center py-12">
             <Brain className="h-8 w-8 animate-pulse text-teal-600 mr-4" />
             <div>
-              <p className="text-lg">Generating Investigation Recommendations...</p>
-              <p className="text-sm text-gray-600">AI is analyzing clinical data to suggest appropriate tests</p>
+              <p className="text-lg">Generating Investigation Intelligence...</p>
+              <p className="text-sm text-gray-600">AI is analyzing clinical data and generating smart recommendations</p>
             </div>
           </CardContent>
         </Card>
@@ -205,8 +151,8 @@ export function InvestigationOrdering({
       <Card className="max-w-6xl mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center space-x-2">
-            <Beaker className="h-6 w-6 text-teal-600" />
-            <span>Investigation Ordering & Clinical Decision Support</span>
+            <Brain className="h-6 w-6 text-teal-600" />
+            <span>Intelligent Investigation Ordering</span>
           </CardTitle>
           <p className="text-gray-600">
             Chief Complaint: <span className="font-medium">{chiefComplaint}</span>
@@ -214,6 +160,18 @@ export function InvestigationOrdering({
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {/* AI Error Alert */}
+          {aiError && (
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                <div className="font-medium text-yellow-800 mb-2">AI Service Unavailable</div>
+                <p className="text-sm">{aiError}</p>
+                <p className="text-sm mt-1">Using fallback recommendations based on clinical protocols.</p>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Red Flags Alert */}
           {redFlags.length > 0 && (
             <Alert className="border-red-200 bg-red-50">
@@ -226,14 +184,6 @@ export function InvestigationOrdering({
                     <Badge className="ml-2 bg-red-100 text-red-800">
                       {flag.severity.toUpperCase()}
                     </Badge>
-                    <p className="text-sm mt-1">{flag.description}</p>
-                    {flag.immediateActions.length > 0 && (
-                      <ul className="text-sm mt-1 ml-4">
-                        {flag.immediateActions.map((action, idx) => (
-                          <li key={idx}>• {action}</li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 ))}
               </AlertDescription>
@@ -243,71 +193,96 @@ export function InvestigationOrdering({
           {/* Investigation Recommendations */}
           <div>
             <h3 className="text-xl font-semibold mb-4 flex items-center">
-              <Brain className="h-5 w-5 text-teal-600 mr-2" />
-              AI-Recommended Investigations
+              <TrendingUp className="h-5 w-5 text-teal-600 mr-2" />
+              Smart Investigation Recommendations
             </h3>
             
             <div className="grid gap-4">
-              {recommendations.map((rec, index) => (
-                <Card key={rec.investigation.id} className="border-l-4 border-l-teal-500">
+              {investigationIntelligence.map((item, index) => (
+                <Card key={item.investigation.id} className="border-l-4 border-l-teal-500">
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-4">
                       <Checkbox
-                        checked={selectedInvestigations.includes(rec.investigation.id)}
-                        onCheckedChange={() => handleInvestigationToggle(rec.investigation.id)}
+                        checked={selectedInvestigations.includes(item.investigation.id)}
+                        onCheckedChange={() => handleInvestigationToggle(item.investigation.id)}
                         className="mt-1"
                       />
                       
                       <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          {getInvestigationIcon(rec.investigation.type)}
-                          <h4 className="font-medium text-lg">{rec.investigation.name}</h4>
+                        <div className="flex items-center space-x-3 mb-3">
+                          {getInvestigationIcon(item.investigation.type)}
+                          <h4 className="font-medium text-lg">{item.investigation.name}</h4>
                           <Badge variant="outline" className="text-xs">
-                            Priority {rec.priority}
+                            Priority {item.priority}
                           </Badge>
-                          <Badge className={`${getUrgencyColor(rec.investigation.urgency)} text-white text-xs`}>
-                            {rec.investigation.urgency.toUpperCase()}
+                          <Badge className={`text-xs border ${getRecommendationColor(item.intelligence.overallRecommendation.recommendation)}`}>
+                            {item.intelligence.overallRecommendation.recommendation.replace('-', ' ').toUpperCase()}
                           </Badge>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        {/* Cost-Benefit Analysis */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded-lg">
                           <div>
-                            <span className="text-sm font-medium">Category:</span>
-                            <p className="text-sm">{rec.investigation.category}</p>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <DollarSign className={`h-4 w-4 ${getCostColor(item.intelligence.costBenefit.costCategory)}`} />
+                              <span className="text-sm font-medium">Cost Analysis</span>
+                            </div>
+                            <p className="text-sm">${item.intelligence.costBenefit.estimatedCost}</p>
+                            <p className="text-xs text-gray-600">{item.intelligence.costBenefit.costCategory} cost</p>
                           </div>
                           <div>
-                            <span className="text-sm font-medium">Indication:</span>
-                            <p className="text-sm">{rec.investigation.indication}</p>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <TrendingUp className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium">Diagnostic Yield</span>
+                            </div>
+                            <Progress value={item.intelligence.costBenefit.diagnosticYield} className="h-2 mb-1" />
+                            <p className="text-xs text-gray-600">{item.intelligence.costBenefit.diagnosticYield}% likelihood</p>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <DollarSign className={`h-4 w-4 ${getCostColor(rec.investigation.cost)}`} />
-                            <span className={`text-sm font-medium ${getCostColor(rec.investigation.cost)}`}>
-                              {rec.investigation.cost} cost
-                            </span>
+                          <div>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <Brain className="h-4 w-4 text-purple-600" />
+                              <span className="text-sm font-medium">Clinical Benefit</span>
+                            </div>
+                            <Progress value={item.intelligence.costBenefit.clinicalBenefit * 10} className="h-2 mb-1" />
+                            <p className="text-xs text-gray-600">{item.intelligence.costBenefit.clinicalBenefit}/10 score</p>
                           </div>
                         </div>
 
+                        {/* Clinical Rationale */}
                         <div className="space-y-2">
                           <div>
                             <span className="text-sm font-medium text-teal-700">Clinical Rationale:</span>
-                            <p className="text-sm">{rec.clinicalRationale}</p>
+                            <p className="text-sm">{item.clinicalRationale}</p>
                           </div>
-                          {rec.investigation.rationale && (
-                            <div>
-                              <span className="text-sm font-medium text-gray-700">Scientific Rationale:</span>
-                              <p className="text-sm text-gray-600">{rec.investigation.rationale}</p>
-                            </div>
-                          )}
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">Cost-Benefit Justification:</span>
+                            <p className="text-sm text-gray-600">{item.intelligence.costBenefit.justification}</p>
+                          </div>
                         </div>
 
-                        {rec.contraindications && rec.contraindications.length > 0 && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded">
-                            <span className="text-sm font-medium text-yellow-800">Contraindications:</span>
-                            <ul className="text-sm text-yellow-700 mt-1">
-                              {rec.contraindications.map((contra, idx) => (
-                                <li key={idx}>• {contra}</li>
-                              ))}
-                            </ul>
+                        {/* Contraindications & Warnings */}
+                        {item.intelligence.contraindications.riskAssessment !== 'low' && (
+                          <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Shield className="h-4 w-4 text-yellow-600" />
+                              <span className="text-sm font-medium text-yellow-800">Safety Assessment</span>
+                              <Badge variant="outline" className="text-xs">
+                                {item.intelligence.contraindications.riskAssessment} risk
+                              </Badge>
+                            </div>
+                            {item.intelligence.contraindications.warnings.map((warning, idx) => (
+                              <p key={idx} className="text-sm text-yellow-700">• {warning.description}</p>
+                            ))}
+                            {item.intelligence.contraindications.alternativeRecommendations.length > 0 && (
+                              <div className="mt-2">
+                                <span className="text-xs font-medium">Alternatives: </span>
+                                {item.intelligence.contraindications.alternativeRecommendations.map((alt, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs mr-1">
+                                    {alt}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -323,7 +298,7 @@ export function InvestigationOrdering({
             <div>
               <h3 className="text-xl font-semibold mb-4 flex items-center">
                 <Info className="h-5 w-5 text-blue-600 mr-2" />
-                Clinical Guidelines
+                Evidence-Based Guidelines
               </h3>
               
               <div className="space-y-3">
@@ -338,16 +313,6 @@ export function InvestigationOrdering({
                       </div>
                       <p className="text-sm text-gray-600 mb-2">Source: {guideline.source}</p>
                       <p className="text-sm">{guideline.recommendation}</p>
-                      {guideline.applicableConditions.length > 0 && (
-                        <div className="mt-2">
-                          <span className="text-xs font-medium">Applicable to: </span>
-                          {guideline.applicableConditions.map((condition, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs mr-1">
-                              {condition}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -383,10 +348,10 @@ export function InvestigationOrdering({
                   <span className="text-sm font-medium">Selected:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedInvestigations.map(id => {
-                      const rec = recommendations.find(r => r.investigation.id === id);
-                      return rec ? (
+                      const item = investigationIntelligence.find(i => i.investigation.id === id);
+                      return item ? (
                         <Badge key={id} variant="secondary" className="text-xs">
-                          {rec.investigation.name}
+                          {item.investigation.name}
                         </Badge>
                       ) : null;
                     })}

@@ -1,6 +1,9 @@
+
+// ABOUTME: Progress component for displaying completion status and loading states
+// ABOUTME: Provides visual feedback for investigation progress and diagnostic yield indicators
+
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
-
 import { cn } from "@/lib/utils"
 
 const Progress = React.forwardRef<
