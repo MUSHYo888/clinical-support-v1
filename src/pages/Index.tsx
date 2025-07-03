@@ -8,12 +8,14 @@ import { NewPatientForm } from '@/components/NewPatientForm';
 import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { AssessmentWorkflow } from '@/components/AssessmentWorkflow';
 import { PatientList } from '@/components/PatientList';
+import { AssessmentResume } from '@/components/AssessmentResume';
 import { Patient, Assessment } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
-import { useCreateAssessment, useUpdateAssessmentStep } from '@/hooks/useAssessment';
+import { useCreateAssessment, useUpdateAssessmentStep, useAssessment } from '@/hooks/useAssessment';
 import { useUpdatePatientAssessment } from '@/hooks/usePatients';
+import { supabase } from '@/integrations/supabase/client';
 
-type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'summary';
+type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'summary' | 'resume-assessment';
 
 const Index = () => {
   const { state, dispatch } = useMedical();
@@ -68,6 +70,54 @@ const Index = () => {
     setSelectedComplaint('');
   };
 
+  const handleResumeAssessment = async (assessmentId: string) => {
+    try {
+      // Load the assessment details
+      const { data: assessment, error } = await supabase
+        .from('assessments')
+        .select(`
+          *,
+          patients!inner(*)
+        `)
+        .eq('id', assessmentId)
+        .single();
+
+      if (error) throw error;
+
+      // Set up the context
+      dispatch({ 
+        type: 'SET_CURRENT_PATIENT', 
+        payload: {
+          id: assessment.patients.id,
+          name: assessment.patients.name,
+          age: assessment.patients.age,
+          gender: assessment.patients.gender as 'male' | 'female' | 'other',
+          patientId: assessment.patients.patient_id,
+          location: assessment.patients.location,
+          createdAt: assessment.patients.created_at
+        }
+      });
+
+      dispatch({
+        type: 'SET_CURRENT_ASSESSMENT',
+        payload: {
+          id: assessment.id,
+          patientId: assessment.patient_id,
+          chiefComplaint: assessment.chief_complaint,
+          status: assessment.status as 'in-progress' | 'completed' | 'draft',
+          currentStep: assessment.current_step,
+          createdAt: assessment.created_at,
+          updatedAt: assessment.updated_at
+        }
+      });
+
+      setSelectedComplaint(assessment.chief_complaint);
+      setCurrentView('assessment');
+    } catch (error) {
+      console.error('Failed to resume assessment:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -113,6 +163,13 @@ const Index = () => {
           />
         )}
         
+        {currentView === 'resume-assessment' && (
+          <AssessmentResume
+            onResumeAssessment={handleResumeAssessment}
+            onNewAssessment={handleNewPatient}
+          />
+        )}
+
         {currentView === 'summary' && (
           <div className="p-6">
             <div className="max-w-4xl mx-auto text-center">

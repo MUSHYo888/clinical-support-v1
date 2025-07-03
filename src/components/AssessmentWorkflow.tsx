@@ -54,27 +54,38 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
     try {
       setLoading(true);
       setError(null);
+      console.log('Loading questions for chief complaint:', chiefComplaint);
       
       const generatedQuestions = await AIService.generateQuestions(chiefComplaint);
+      console.log('Generated questions:', generatedQuestions.length);
       setQuestions(generatedQuestions);
       
       if (state.currentAssessment && !questionsGenerated) {
         console.log('Saving questions to database for assessment:', state.currentAssessment.id);
-        await saveQuestionsMutation.mutateAsync({
-          assessmentId: state.currentAssessment.id,
-          questions: generatedQuestions
-        });
-        setQuestionsGenerated(true);
+        try {
+          await saveQuestionsMutation.mutateAsync({
+            assessmentId: state.currentAssessment.id,
+            questions: generatedQuestions
+          });
+          setQuestionsGenerated(true);
+          console.log('Questions saved successfully to database');
+        } catch (saveError) {
+          console.error('Failed to save questions to database:', saveError);
+          setError('Questions generated but failed to save. Continuing with fallback data.');
+        }
       }
     } catch (err) {
       console.error('Error loading questions:', err);
-      setError('Failed to load AI-generated questions. Using fallback questions.');
+      setError(`Failed to load questions: ${err.message || 'Unknown error'}. Using fallback questions.`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAnswerSubmit = async (questionId: string, answer: any) => {
+    console.log('Submitting answer:', { questionId, answer, assessmentId: state.currentAssessment?.id });
+    
+    // Update local state first
     dispatch({
       type: 'ADD_ANSWER',
       payload: {
@@ -87,8 +98,10 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
       }
     });
 
+    // Save to database
     if (state.currentAssessment) {
       try {
+        console.log('Saving answer to database...');
         await saveAnswerMutation.mutateAsync({
           assessmentId: state.currentAssessment.id,
           questionId,
@@ -98,15 +111,24 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
             notes: answer.notes
           }
         });
-        console.log('Answer saved to database');
+        console.log('Answer saved successfully to database');
       } catch (error) {
         console.error('Failed to save answer to database:', error);
+        // Show user-friendly error
+        setError('Failed to save answer. Please try again.');
+        return; // Don't proceed if saving failed
       }
+    } else {
+      console.error('No current assessment found');
+      setError('Assessment session lost. Please restart assessment.');
+      return;
     }
 
+    // Proceed to next question or next step
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
+      console.log('All questions answered, proceeding to ROS');
       setShowROS(true);
       await updateStep(2);
     }

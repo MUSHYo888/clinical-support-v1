@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { Plus, Users, Clock, FileText, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Users, Clock, FileText, Activity, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMedical } from '@/context/MedicalContext';
+import { SystemHealth } from './SystemHealth';
 
 interface DashboardProps {
   onNewPatient: () => void;
@@ -12,6 +13,7 @@ interface DashboardProps {
 
 export function Dashboard({ onNewPatient, onViewPatients }: DashboardProps) {
   const { state } = useMedical();
+  const [showSystemHealth, setShowSystemHealth] = useState(false);
   
   const stats = [
     { title: 'Total Patients', value: state.patients.length, icon: Users, color: 'text-blue-600' },
@@ -84,6 +86,32 @@ export function Dashboard({ onNewPatient, onViewPatients }: DashboardProps) {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* System Health */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>System Status</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSystemHealth(!showSystemHealth)}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {showSystemHealth ? 'Hide' : 'Show'} Details
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {showSystemHealth ? (
+            <SystemHealth />
+          ) : (
+            <p className="text-gray-600">
+              Click "Show Details" to check system health and troubleshoot issues.
+            </p>
           )}
         </CardContent>
       </Card>

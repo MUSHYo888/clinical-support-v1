@@ -33,8 +33,13 @@ serve(async (req) => {
   }
 
   try {
+    console.log('AI Assistant function called at:', new Date().toISOString());
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+
     const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
     if (!openRouterApiKey) {
+      console.error('OPENROUTER_API_KEY is not configured');
       throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
@@ -44,6 +49,7 @@ serve(async (req) => {
     const { action, chiefComplaint } = requestBody;
     
     if (!action) {
+      console.error('Action parameter is required');
       throw new Error('Action parameter is required');
     }
 
@@ -382,6 +388,19 @@ Generate comprehensive treatment recommendations including medications, treatmen
       });
     }
 
+    // Test endpoint for system health checks
+    if (action === 'test') {
+      console.log('Test endpoint called - function is working');
+      return new Response(JSON.stringify({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        message: 'AI Assistant function is operational' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.error('Invalid action parameter:', action);
     return new Response(JSON.stringify({ error: 'Invalid action parameter' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -389,7 +408,12 @@ Generate comprehensive treatment recommendations including medications, treatmen
 
   } catch (error) {
     console.error('Error in ai-assistant function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error stack:', error.stack);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      function: 'ai-assistant'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
