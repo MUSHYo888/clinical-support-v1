@@ -1,8 +1,13 @@
-
 // ABOUTME: Service for assessment workflow operations with Supabase
 // ABOUTME: Manages assessment lifecycle, questions, answers, and ROS data
 import { supabase } from '@/integrations/supabase/client';
 import { Assessment, Question, Answer, ReviewOfSystems } from '@/types/medical';
+
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
 
 export class AssessmentService {
   static async createAssessment(patientId: string, chiefComplaint: string): Promise<Assessment> {
@@ -58,15 +63,28 @@ export class AssessmentService {
   }
 
   static async saveQuestions(assessmentId: string, questions: Question[]): Promise<void> {
-    const questionsData = questions.map((q, index) => ({
-      assessment_id: assessmentId,
-      question_text: q.text,
-      question_type: q.type,
-      options: q.options || null,
-      category: q.category,
-      required: q.required,
-      order_index: index
-    }));
+    console.log(`AssessmentService: Saving ${questions.length} questions for assessment ${assessmentId}`);
+    
+    if (!isValidUUID(assessmentId)) {
+      throw new Error(`Invalid assessment ID format: ${assessmentId}`);
+    }
+
+    const questionsData = questions.map((q, index) => {
+      if (!isValidUUID(q.id)) {
+        throw new Error(`Invalid question ID format: ${q.id}`);
+      }
+      
+      return {
+        id: q.id, // Use the question's UUID as the database ID
+        assessment_id: assessmentId,
+        question_text: q.text,
+        question_type: q.type,
+        options: q.options || null,
+        category: q.category,
+        required: q.required,
+        order_index: index
+      };
+    });
 
     const { error } = await supabase
       .from('questions')
@@ -74,11 +92,36 @@ export class AssessmentService {
 
     if (error) {
       console.error('Error saving questions:', error);
-      throw new Error('Failed to save questions');
+      throw new Error(`Failed to save questions: ${error.message}`);
     }
+    
+    console.log(`AssessmentService: Successfully saved ${questions.length} questions`);
   }
 
   static async saveAnswer(assessmentId: string, questionId: string, answer: Answer): Promise<void> {
+    console.log(`AssessmentService: Saving answer for question ${questionId} in assessment ${assessmentId}`);
+    
+    // Validate UUIDs
+    if (!isValidUUID(assessmentId)) {
+      throw new Error(`Invalid assessment ID format: ${assessmentId}`);
+    }
+    
+    if (!isValidUUID(questionId)) {
+      throw new Error(`Invalid question ID format: ${questionId}`);
+    }
+
+    // Validate answer data
+    if (!answer || typeof answer.value === 'undefined') {
+      throw new Error('Answer value is required');
+    }
+
+    console.log('Answer data being saved:', {
+      assessment_id: assessmentId,
+      question_id: questionId,
+      answer_value: answer.value,
+      notes: answer.notes
+    });
+
     const { error } = await supabase
       .from('answers')
       .upsert({
@@ -90,8 +133,10 @@ export class AssessmentService {
 
     if (error) {
       console.error('Error saving answer:', error);
-      throw new Error('Failed to save answer');
+      throw new Error(`Failed to save answer: ${error.message}`);
     }
+    
+    console.log(`AssessmentService: Successfully saved answer for question ${questionId}`);
   }
 
   static async saveReviewOfSystems(assessmentId: string, systemName: string, rosData: { positive: string[]; negative: string[]; notes?: string }): Promise<void> {

@@ -67,6 +67,14 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
       
       const generatedQuestions = await AIService.generateQuestions(chiefComplaint);
       addDebugInfo(`Generated ${generatedQuestions.length} questions`);
+      
+      // Validate that all questions have proper UUIDs
+      const invalidQuestions = generatedQuestions.filter(q => !q.id || typeof q.id !== 'string' || q.id.length < 36);
+      if (invalidQuestions.length > 0) {
+        addDebugInfo(`WARNING: ${invalidQuestions.length} questions have invalid IDs`);
+        console.warn('Questions with invalid IDs:', invalidQuestions);
+      }
+      
       setQuestions(generatedQuestions);
       
       if (state.currentAssessment && !questionsGenerated) {
@@ -100,6 +108,15 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
       addDebugInfo('ERROR: No current assessment found');
       toast.error('Assessment session lost. Please restart assessment.');
       setError('Assessment session lost. Please restart assessment.');
+      return;
+    }
+
+    // Validate question ID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(questionId)) {
+      addDebugInfo(`ERROR: Invalid question ID format: ${questionId}`);
+      toast.error('Invalid question ID format. Please try again.');
+      setError(`Invalid question ID format: ${questionId}`);
       return;
     }
 
