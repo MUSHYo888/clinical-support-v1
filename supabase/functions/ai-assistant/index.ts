@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -54,7 +55,7 @@ serve(async (req) => {
     console.log('Environment check:', {
       hasOpenRouterKey: !!openRouterApiKey,
       keyLength: openRouterApiKey ? openRouterApiKey.length : 0,
-      keyPreview: openRouterApiKey ? openRouterApiKey.substring(0, 8) + '...' : 'NOT_SET'
+      keyPreview: openRouterApiKey ? openRouterApiKey.substring(0, 12) + '...' : 'NOT_SET'
     });
 
     if (!openRouterApiKey) {
@@ -114,12 +115,13 @@ serve(async (req) => {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         service: 'ai-assistant',
-        version: '1.1.0',
+        version: '2.0.0',
         environment: {
           hasOpenRouterKey: !!openRouterApiKey,
           openRouterKeyLength: openRouterApiKey ? openRouterApiKey.length : 0,
           denoVersion: Deno.version.deno,
-          keyStatus: openRouterApiKey ? 'CONFIGURED' : 'MISSING'
+          keyStatus: openRouterApiKey ? 'CONFIGURED' : 'MISSING',
+          keyPrefix: openRouterApiKey ? openRouterApiKey.substring(0, 8) + '...' : 'N/A'
         },
         endpoints: {
           'generate-questions': 'available',
@@ -146,7 +148,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         message: 'AI Assistant function is operational',
         openRouterConfigured: !!openRouterApiKey,
-        version: '1.1.0',
+        version: '2.0.0',
         testResult: 'PASS'
       };
       console.log('Test response:', testResponse);
@@ -207,7 +209,9 @@ Generate focused clinical questions for this presentation.`;
       console.log(`User prompt length: ${userPrompt.length} characters`);
 
       try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        // Try primary model first
+        let modelToUse = 'anthropic/claude-3.5-sonnet';
+        let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${openRouterApiKey}`,
@@ -216,7 +220,7 @@ Generate focused clinical questions for this presentation.`;
             'X-Title': 'Medical Assessment AI'
           },
           body: JSON.stringify({
-            model: 'anthropic/claude-3.5-sonnet',
+            model: modelToUse,
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
@@ -229,15 +233,70 @@ Generate focused clinical questions for this presentation.`;
         console.log(`OpenRouter response status: ${response.status}`);
         console.log(`OpenRouter response headers:`, Object.fromEntries(response.headers.entries()));
 
+        // If primary model fails, try fallback
         if (!response.ok) {
           const errorText = await response.text();
-          logError('OPENROUTER_API', { status: response.status, statusText: response.statusText }, { errorText });
+          console.log(`Primary model failed, trying fallback. Error: ${errorText}`);
+          
+          // Try fallback model
+          modelToUse = 'anthropic/claude-3-haiku';
+          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openRouterApiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://lovable.dev',
+              'X-Title': 'Medical Assessment AI'
+            },
+            body: JSON.stringify({
+              model: modelToUse,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.3,
+              max_tokens: 2000
+            }),
+          });
+
+          console.log(`Fallback model response status: ${response.status}`);
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('OpenRouter API Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: errorText
+          });
+          
+          logError('OPENROUTER_API', { status: response.status, statusText: response.statusText }, { 
+            errorText,
+            model: modelToUse,
+            hasApiKey: !!openRouterApiKey,
+            keyLength: openRouterApiKey?.length
+          });
           
           const errorResponse = {
             error: `OpenRouter API error: ${response.status} - ${response.statusText}`,
             details: errorText,
             timestamp: new Date().toISOString(),
-            apiKeyConfigured: !!openRouterApiKey
+            apiKeyConfigured: !!openRouterApiKey,
+            modelUsed: modelToUse,
+            troubleshooting: {
+              possibleCauses: [
+                'API key invalid or expired',
+                'Insufficient credits on OpenRouter account',
+                'Model not available or rate limited',
+                'Request payload too large'
+              ],
+              nextSteps: [
+                'Verify API key in OpenRouter dashboard',
+                'Check account credits and billing',
+                'Try again in a few minutes if rate limited'
+              ]
+            }
           };
           
           return new Response(JSON.stringify(errorResponse), {
@@ -295,7 +354,15 @@ Generate focused clinical questions for this presentation.`;
           details: fetchError.message,
           timestamp: new Date().toISOString(),
           chiefComplaint,
-          apiKeyConfigured: !!openRouterApiKey
+          apiKeyConfigured: !!openRouterApiKey,
+          troubleshooting: {
+            likelyCause: 'Network connectivity or OpenRouter API issue',
+            nextSteps: [
+              'Check internet connectivity',
+              'Verify OpenRouter API status',
+              'Try again in a few moments'
+            ]
+          }
         };
         
         return new Response(JSON.stringify(errorResponse), {
@@ -505,7 +572,7 @@ Generate comprehensive clinical decision support.`;
       message: error.message,
       timestamp: new Date().toISOString(),
       function: 'ai-assistant',
-      version: '1.1.0'
+      version: '2.0.0'
     };
     
     return new Response(JSON.stringify(errorResponse), {

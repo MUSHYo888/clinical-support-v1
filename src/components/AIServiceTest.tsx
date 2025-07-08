@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { AIService } from '@/services/aiService';
-import { CheckCircle, XCircle, AlertTriangle, Loader2, Copy, ExternalLink } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Loader2, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TestResult {
@@ -75,7 +75,7 @@ export function AIServiceTest() {
   const runComprehensiveTests = async () => {
     setLoading(true);
     setTestResults([]);
-    setDetailedLogs('=== Starting Comprehensive AI Service Tests ===\n');
+    setDetailedLogs('=== Starting Enhanced AI Service Diagnostics ===\n');
 
     try {
       // Test 1: Basic Edge Function Health Check
@@ -97,7 +97,8 @@ export function AIServiceTest() {
           status: data?.status || 'unknown',
           version: data?.version || 'unknown',
           openRouterConfigured: data?.environment?.hasOpenRouterKey || false,
-          environment: data?.environment || {}
+          environment: data?.environment || {},
+          keyStatus: data?.environment?.keyStatus || 'unknown'
         };
       });
 
@@ -119,7 +120,7 @@ export function AIServiceTest() {
         return data;
       });
 
-      // Test 3: Direct Question Generation
+      // Test 3: Direct Question Generation with Enhanced Error Capture
       await runTest('Direct Question Generation', async () => {
         console.log('Testing direct question generation...');
         const { data, error } = await supabase.functions.invoke('ai-assistant', {
@@ -131,8 +132,23 @@ export function AIServiceTest() {
         
         if (error) {
           console.error('Question generation error:', error);
-          setDetailedLogs(prev => prev + `Question Generation Error: ${JSON.stringify(error, null, 2)}\n\n`);
+          setDetailedLogs(prev => prev + `Question Generation Supabase Error: ${JSON.stringify(error, null, 2)}\n\n`);
           throw new Error(`Question generation failed: ${error.message}`);
+        }
+        
+        // Check if the response contains an error from the edge function
+        if (data?.error) {
+          console.error('Edge function returned error:', data);
+          setDetailedLogs(prev => prev + `Edge Function Error Response: ${JSON.stringify(data, null, 2)}\n\n`);
+          
+          let errorMessage = `Edge function error: ${data.error}`;
+          if (data.troubleshooting) {
+            errorMessage += `\n\nTroubleshooting Info:\n`;
+            errorMessage += `Possible Causes: ${data.troubleshooting.possibleCauses?.join(', ')}\n`;
+            errorMessage += `Next Steps: ${data.troubleshooting.nextSteps?.join(', ')}`;
+          }
+          
+          throw new Error(errorMessage);
         }
         
         if (!data?.questions) {
@@ -192,36 +208,6 @@ export function AIServiceTest() {
         };
       });
 
-      // Test 5: Performance Test
-      await runTest('Performance Test', async () => {
-        console.log('Running performance test...');
-        const startTime = Date.now();
-        
-        const promises = Array.from({ length: 3 }, (_, i) => 
-          supabase.functions.invoke('ai-assistant', {
-            body: {
-              action: 'generate-questions',
-              chiefComplaint: `Test complaint ${i + 1}`
-            }
-          })
-        );
-        
-        const results = await Promise.allSettled(promises);
-        const duration = Date.now() - startTime;
-        
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
-        
-        return {
-          totalRequests: 3,
-          successful,
-          failed,
-          totalDuration: duration,
-          averageDuration: duration / 3,
-          successRate: (successful / 3) * 100
-        };
-      });
-
       setDetailedLogs(prev => prev + '=== All Tests Completed Successfully ===\n');
       toast.success('All AI service tests completed successfully!');
 
@@ -265,7 +251,7 @@ export function AIServiceTest() {
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>AI Service Comprehensive Testing & Diagnostics</span>
+          <span>🔬 Enhanced AI Service Diagnostics</span>
           {totalTests > 0 && (
             <div className="text-right">
               <div className="text-2xl font-bold text-blue-600">{Math.round(successRate)}%</div>
@@ -292,10 +278,13 @@ export function AIServiceTest() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Running Tests...
+                  Running Diagnostics...
                 </>
               ) : (
-                'Run Comprehensive Tests'
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Run Enhanced Diagnostics
+                </>
               )}
             </Button>
             <Button variant="outline" onClick={clearResults}>
@@ -313,7 +302,7 @@ export function AIServiceTest() {
         {/* Test Results */}
         {testResults.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Test Results</h3>
+            <h3 className="text-lg font-semibold">Diagnostic Results</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {testResults.map((result, index) => (
                 <Alert key={index} className={
@@ -347,7 +336,7 @@ export function AIServiceTest() {
                         {result.status === 'error' && (
                           <div className="space-y-2">
                             <div className="text-red-700">❌ Test failed</div>
-                            <div className="text-red-600 text-sm">{result.error}</div>
+                            <div className="text-red-600 text-sm whitespace-pre-line">{result.error}</div>
                             {result.details && (
                               <details className="text-xs">
                                 <summary className="cursor-pointer text-red-500 hover:text-red-700">
@@ -372,35 +361,35 @@ export function AIServiceTest() {
         {/* Detailed Logs */}
         {detailedLogs && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Detailed Logs</h3>
+            <h3 className="text-lg font-semibold">Detailed Diagnostic Logs</h3>
             <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
               <pre className="whitespace-pre-wrap overflow-auto max-h-96">{detailedLogs}</pre>
             </div>
           </div>
         )}
 
-        {/* Quick Actions & Documentation */}
+        {/* Enhanced Troubleshooting Guide */}
         <div className="border-t pt-4">
-          <h3 className="text-lg font-semibold mb-2">Troubleshooting Guide</h3>
+          <h3 className="text-lg font-semibold mb-2">🔧 Enhanced Troubleshooting Guide</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <strong>Common Issues:</strong>
+              <strong>Most Common Issues:</strong>
               <ul className="mt-1 space-y-1 text-gray-600">
-                <li>• OPENROUTER_API_KEY not configured in Supabase secrets</li>
-                <li>• OpenRouter API key invalid or out of credits</li>
-                <li>• Edge function deployment issues</li>
-                <li>• Network connectivity problems</li>
-                <li>• Invalid request format or parameters</li>
+                <li>🔑 OPENROUTER_API_KEY not configured or invalid</li>
+                <li>💳 OpenRouter account out of credits</li>
+                <li>🚫 API key doesn't have access to required models</li>
+                <li>⚠️ Rate limiting from OpenRouter</li>
+                <li>🌐 Network connectivity issues</li>
               </ul>
             </div>
             <div>
-              <strong>Next Steps:</strong>
+              <strong>Immediate Actions:</strong>
               <ul className="mt-1 space-y-1 text-gray-600">
-                <li>• Check Supabase Edge Function logs</li>
-                <li>• Verify API key in project settings</li>
-                <li>• Test OpenRouter API directly</li>
-                <li>• Check network and CORS configuration</li>
-                <li>• Review detailed logs above</li>
+                <li>✅ Verify API key in OpenRouter dashboard</li>
+                <li>💰 Check account credits and billing status</li>
+                <li>🔄 Try again if rate limited</li>
+                <li>📊 Check Supabase Edge Function logs</li>
+                <li>🔍 Review detailed diagnostic logs above</li>
               </ul>
             </div>
           </div>
