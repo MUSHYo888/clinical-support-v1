@@ -50,20 +50,20 @@ serve(async (req) => {
     console.log('Method:', req.method);
     console.log('URL:', req.url);
 
-    // Check OpenRouter API Key
-    const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
+    // Check OpenAI API Key
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     console.log('Environment check:', {
-      hasOpenRouterKey: !!openRouterApiKey,
-      keyLength: openRouterApiKey ? openRouterApiKey.length : 0,
-      keyPreview: openRouterApiKey ? openRouterApiKey.substring(0, 12) + '...' : 'NOT_SET'
+      hasOpenAIKey: !!openAIApiKey,
+      keyLength: openAIApiKey ? openAIApiKey.length : 0,
+      keyPreview: openAIApiKey ? openAIApiKey.substring(0, 12) + '...' : 'NOT_SET'
     });
 
-    if (!openRouterApiKey) {
+    if (!openAIApiKey) {
       const errorResponse = { 
-        error: 'OPENROUTER_API_KEY is not configured in Supabase secrets',
+        error: 'OPENAI_API_KEY is not configured in Supabase secrets',
         timestamp: new Date().toISOString(),
         function: 'ai-assistant',
-        details: 'Please configure the OPENROUTER_API_KEY in your Supabase project settings under Edge Functions > Secrets'
+        details: 'Please configure the OPENAI_API_KEY in your Supabase project settings under Edge Functions > Secrets'
       };
       console.error('API Key Error:', errorResponse);
       return new Response(JSON.stringify(errorResponse), {
@@ -117,11 +117,11 @@ serve(async (req) => {
         service: 'ai-assistant',
         version: '2.0.0',
         environment: {
-          hasOpenRouterKey: !!openRouterApiKey,
-          openRouterKeyLength: openRouterApiKey ? openRouterApiKey.length : 0,
+          hasOpenAIKey: !!openAIApiKey,
+          openAIKeyLength: openAIApiKey ? openAIApiKey.length : 0,
           denoVersion: Deno.version.deno,
-          keyStatus: openRouterApiKey ? 'CONFIGURED' : 'MISSING',
-          keyPrefix: openRouterApiKey ? openRouterApiKey.substring(0, 8) + '...' : 'N/A'
+          keyStatus: openAIApiKey ? 'CONFIGURED' : 'MISSING',
+          keyPrefix: openAIApiKey ? openAIApiKey.substring(0, 8) + '...' : 'N/A'
         },
         endpoints: {
           'generate-questions': 'available',
@@ -147,7 +147,7 @@ serve(async (req) => {
         status: 'healthy', 
         timestamp: new Date().toISOString(),
         message: 'AI Assistant function is operational',
-        openRouterConfigured: !!openRouterApiKey,
+        openAIConfigured: !!openAIApiKey,
         version: '2.0.0',
         testResult: 'PASS'
       };
@@ -204,20 +204,17 @@ ${Object.keys(previousAnswers).length > 0 ? `Previous answers: ${JSON.stringify(
 
 Generate focused clinical questions for this presentation.`;
 
-      console.log(`Sending request to OpenRouter API...`);
+      console.log(`Sending request to OpenAI API...`);
       console.log(`System prompt length: ${systemPrompt.length} characters`);
       console.log(`User prompt length: ${userPrompt.length} characters`);
 
       try {
-        // Try primary model first
-        let modelToUse = 'anthropic/claude-3.5-sonnet';
-        let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        const modelToUse = 'gpt-4o-mini';
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openRouterApiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://lovable.dev',
-            'X-Title': 'Medical Assessment AI'
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             model: modelToUse,
@@ -230,69 +227,40 @@ Generate focused clinical questions for this presentation.`;
           }),
         });
 
-        console.log(`OpenRouter response status: ${response.status}`);
-        console.log(`OpenRouter response headers:`, Object.fromEntries(response.headers.entries()));
-
-        // If primary model fails, try fallback
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.log(`Primary model failed, trying fallback. Error: ${errorText}`);
-          
-          // Try fallback model
-          modelToUse = 'anthropic/claude-3-haiku';
-          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openRouterApiKey}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://lovable.dev',
-              'X-Title': 'Medical Assessment AI'
-            },
-            body: JSON.stringify({
-              model: modelToUse,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ],
-              temperature: 0.3,
-              max_tokens: 2000
-            }),
-          });
-
-          console.log(`Fallback model response status: ${response.status}`);
-        }
+        console.log(`OpenAI response status: ${response.status}`);
+        console.log(`OpenAI response headers:`, Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('OpenRouter API Error Details:', {
+          console.error('OpenAI API Error Details:', {
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries(response.headers.entries()),
             body: errorText
           });
           
-          logError('OPENROUTER_API', { status: response.status, statusText: response.statusText }, { 
+          logError('OPENAI_API', { status: response.status, statusText: response.statusText }, { 
             errorText,
             model: modelToUse,
-            hasApiKey: !!openRouterApiKey,
-            keyLength: openRouterApiKey?.length
+            hasApiKey: !!openAIApiKey,
+            keyLength: openAIApiKey?.length
           });
           
           const errorResponse = {
-            error: `OpenRouter API error: ${response.status} - ${response.statusText}`,
+            error: `OpenAI API error: ${response.status} - ${response.statusText}`,
             details: errorText,
             timestamp: new Date().toISOString(),
-            apiKeyConfigured: !!openRouterApiKey,
+            apiKeyConfigured: !!openAIApiKey,
             modelUsed: modelToUse,
             troubleshooting: {
               possibleCauses: [
                 'API key invalid or expired',
-                'Insufficient credits on OpenRouter account',
+                'Insufficient credits on OpenAI account',
                 'Model not available or rate limited',
                 'Request payload too large'
               ],
               nextSteps: [
-                'Verify API key in OpenRouter dashboard',
+                'Verify API key in OpenAI dashboard',
                 'Check account credits and billing',
                 'Try again in a few minutes if rate limited'
               ]
@@ -306,10 +274,10 @@ Generate focused clinical questions for this presentation.`;
         }
 
         const data = await response.json();
-        console.log('OpenRouter response data:', JSON.stringify(data, null, 2));
+        console.log('OpenAI response data:', JSON.stringify(data, null, 2));
         
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-          throw new Error('Invalid response structure from OpenRouter API');
+          throw new Error('Invalid response structure from OpenAI API');
         }
 
         const aiResponse = data.choices[0].message.content;
@@ -354,12 +322,12 @@ Generate focused clinical questions for this presentation.`;
           details: fetchError.message,
           timestamp: new Date().toISOString(),
           chiefComplaint,
-          apiKeyConfigured: !!openRouterApiKey,
+          apiKeyConfigured: !!openAIApiKey,
           troubleshooting: {
-            likelyCause: 'Network connectivity or OpenRouter API issue',
+            likelyCause: 'Network connectivity or OpenAI API issue',
             nextSteps: [
               'Check internet connectivity',
-              'Verify OpenRouter API status',
+              'Verify OpenAI API status',
               'Try again in a few moments'
             ]
           }
@@ -402,18 +370,16 @@ ${JSON.stringify(rosData, null, 2)}
 
 Generate differential diagnoses with clinical reasoning.`;
 
-      console.log('Sending differential diagnosis request to OpenRouter...');
+      console.log('Sending differential diagnosis request to OpenAI...');
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openRouterApiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://lovable.dev',
-          'X-Title': 'Medical Assessment AI'
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3.5-sonnet',
+          model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -427,8 +393,8 @@ Generate differential diagnoses with clinical reasoning.`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenRouter API error for differential:', response.status, errorText);
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        console.error('OpenAI API error for differential:', response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -511,16 +477,14 @@ ${JSON.stringify(rosData, null, 2)}
 
 Generate comprehensive clinical decision support.`;
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openRouterApiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://lovable.dev',
-          'X-Title': 'Medical Assessment AI'
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3.5-sonnet',
+          model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -532,8 +496,8 @@ Generate comprehensive clinical decision support.`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenRouter API error for clinical support:', response.status, errorText);
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        console.error('OpenAI API error for clinical support:', response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
