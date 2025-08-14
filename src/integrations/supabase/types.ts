@@ -187,6 +187,7 @@ export type Database = {
           age: number
           created_at: string
           gender: string
+          healthcare_provider_id: string | null
           id: string
           last_assessment: string | null
           location: string | null
@@ -198,6 +199,7 @@ export type Database = {
           age: number
           created_at?: string
           gender: string
+          healthcare_provider_id?: string | null
           id?: string
           last_assessment?: string | null
           location?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           age?: number
           created_at?: string
           gender?: string
+          healthcare_provider_id?: string | null
           id?: string
           last_assessment?: string | null
           location?: string | null

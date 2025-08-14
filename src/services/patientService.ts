@@ -6,6 +6,12 @@ import { Patient } from '@/types/medical';
 
 export class PatientService {
   static async createPatient(patientData: Omit<Patient, 'id' | 'createdAt'>): Promise<Patient> {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('User must be authenticated to create patients');
+    }
+
     const { data, error } = await supabase
       .from('patients')
       .insert({
@@ -13,7 +19,8 @@ export class PatientService {
         age: patientData.age,
         gender: patientData.gender,
         patient_id: patientData.patientId,
-        location: patientData.location
+        location: patientData.location,
+        healthcare_provider_id: user.id
       })
       .select()
       .single();
