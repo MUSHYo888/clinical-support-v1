@@ -182,6 +182,36 @@ export type Database = {
           },
         ]
       }
+      healthcare_provider_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string | null
+          role: string | null
+          specialty: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id?: string | null
+          role?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string | null
+          role?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           age: number
@@ -401,9 +431,12 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          created_by: string | null
           default_template: boolean
           id: string
           name: string
+          organization_id: string | null
+          shared: boolean
           specialty: string | null
           template_content: Json
           type: string
@@ -412,9 +445,12 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          created_by?: string | null
           default_template?: boolean
           id?: string
           name: string
+          organization_id?: string | null
+          shared?: boolean
           specialty?: string | null
           template_content: Json
           type: string
@@ -423,9 +459,12 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          created_by?: string | null
           default_template?: boolean
           id?: string
           name?: string
+          organization_id?: string | null
+          shared?: boolean
           specialty?: string | null
           template_content?: Json
           type?: string
@@ -535,6 +574,14 @@ export type Database = {
       }
       user_can_access_patient: {
         Args: { patient_uuid: string }
+        Returns: boolean
+      }
+      user_can_access_template: {
+        Args: { template_uuid: string }
+        Returns: boolean
+      }
+      user_can_modify_template: {
+        Args: { template_uuid: string }
         Returns: boolean
       }
     }
