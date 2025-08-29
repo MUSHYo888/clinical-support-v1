@@ -40,7 +40,6 @@ interface MedicalState {
   reviewOfSystems: ReviewOfSystems;
   pmhData: PastMedicalHistoryData | null;
   peData: PhysicalExamData | null;
-  patients: Patient[];
 }
 
 type MedicalAction =
@@ -52,7 +51,6 @@ type MedicalAction =
   | { type: 'UPDATE_ROS'; payload: { system: string; data: any } }
   | { type: 'SET_PMH_DATA'; payload: PastMedicalHistoryData }
   | { type: 'SET_PE_DATA'; payload: PhysicalExamData }
-  | { type: 'ADD_PATIENT'; payload: Patient }
   | { type: 'RESET_ASSESSMENT' };
 
 const initialState: MedicalState = {
@@ -64,7 +62,6 @@ const initialState: MedicalState = {
   reviewOfSystems: {},
   pmhData: null,
   peData: null,
-  patients: []
 };
 
 function medicalReducer(state: MedicalState, action: MedicalAction): MedicalState {
@@ -113,17 +110,10 @@ function medicalReducer(state: MedicalState, action: MedicalAction): MedicalStat
     case 'SET_PE_DATA':
       return { ...state, peData: action.payload };
     
-    case 'ADD_PATIENT':
-      return { 
-        ...state, 
-        patients: [...state.patients, action.payload] 
-      };
-    
     case 'RESET_ASSESSMENT':
       return {
         ...initialState,
         currentPatient: state.currentPatient,
-        patients: state.patients
       };
     
     default:

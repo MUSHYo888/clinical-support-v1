@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { Plus, Users, Clock, FileText, Activity, Settings, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMedical } from '@/context/MedicalContext';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePatients } from '@/hooks/usePatients';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { SystemHealth } from './SystemHealth';
 
 interface DashboardProps {
@@ -13,14 +15,39 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNewPatient, onViewPatients, onTestAI }: DashboardProps) {
-  const { state } = useMedical();
   const [showSystemHealth, setShowSystemHealth] = useState(false);
+  const { data: patients, isLoading: patientsLoading } = usePatients();
+  const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
   
   const stats = [
-    { title: 'Total Patients', value: state.patients.length, icon: Users, color: 'text-blue-600' },
-    { title: 'Active Assessments', value: '3', icon: Activity, color: 'text-green-600' },
-    { title: 'Completed Today', value: '8', icon: FileText, color: 'text-purple-600' },
-    { title: 'Avg. Time per Assessment', value: '12 min', icon: Clock, color: 'text-orange-600' }
+    { 
+      title: 'Total Patients', 
+      value: dashboardStats?.totalPatients ?? 0, 
+      icon: Users, 
+      color: 'text-blue-600',
+      loading: statsLoading
+    },
+    { 
+      title: 'Active Assessments', 
+      value: dashboardStats?.activeAssessments ?? 0, 
+      icon: Activity, 
+      color: 'text-green-600',
+      loading: statsLoading
+    },
+    { 
+      title: 'Completed Today', 
+      value: dashboardStats?.completedToday ?? 0, 
+      icon: FileText, 
+      color: 'text-purple-600',
+      loading: statsLoading
+    },
+    { 
+      title: 'Avg. Time per Assessment', 
+      value: dashboardStats?.avgTimePerAssessment ?? '0 min', 
+      icon: Clock, 
+      color: 'text-orange-600',
+      loading: statsLoading
+    }
   ];
 
   return (
@@ -60,7 +87,11 @@ export function Dashboard({ onNewPatient, onViewPatients, onTestAI }: DashboardP
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              {stat.loading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-2xl font-bold">{stat.value}</div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -77,14 +108,29 @@ export function Dashboard({ onNewPatient, onViewPatients, onTestAI }: DashboardP
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {state.patients.length === 0 ? (
+          {patientsLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !patients || patients.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p>No patients yet. Start by creating your first patient assessment.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {state.patients.slice(0, 5).map((patient) => (
+              {patients.slice(0, 5).map((patient) => (
                 <div key={patient.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">{patient.name}</p>
