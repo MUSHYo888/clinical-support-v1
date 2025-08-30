@@ -251,6 +251,36 @@ export type Database = {
         }
         Relationships: []
       }
+      phase_answers: {
+        Row: {
+          assessment_id: string
+          completed_at: string
+          created_at: string
+          id: string
+          phase: number
+          phase_summary: Json | null
+          red_flags_identified: Json | null
+        }
+        Insert: {
+          assessment_id: string
+          completed_at?: string
+          created_at?: string
+          id?: string
+          phase: number
+          phase_summary?: Json | null
+          red_flags_identified?: Json | null
+        }
+        Update: {
+          assessment_id?: string
+          completed_at?: string
+          created_at?: string
+          id?: string
+          phase?: number
+          phase_summary?: Json | null
+          red_flags_identified?: Json | null
+        }
+        Relationships: []
+      }
       progress_notes: {
         Row: {
           assessment_changes: string | null
@@ -328,34 +358,49 @@ export type Database = {
         Row: {
           assessment_id: string
           category: string
+          clinical_priority: number | null
           created_at: string
+          follow_up_trigger: string | null
           id: string
           options: Json | null
           order_index: number
+          phase: number
+          question_rationale: string | null
           question_text: string
           question_type: string
+          red_flag_indicator: boolean
           required: boolean
         }
         Insert: {
           assessment_id: string
           category: string
+          clinical_priority?: number | null
           created_at?: string
+          follow_up_trigger?: string | null
           id?: string
           options?: Json | null
           order_index: number
+          phase?: number
+          question_rationale?: string | null
           question_text: string
           question_type: string
+          red_flag_indicator?: boolean
           required?: boolean
         }
         Update: {
           assessment_id?: string
           category?: string
+          clinical_priority?: number | null
           created_at?: string
+          follow_up_trigger?: string | null
           id?: string
           options?: Json | null
           order_index?: number
+          phase?: number
+          question_rationale?: string | null
           question_text?: string
           question_type?: string
+          red_flag_indicator?: boolean
           required?: boolean
         }
         Relationships: [

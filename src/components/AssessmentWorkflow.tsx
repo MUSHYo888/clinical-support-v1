@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AIService } from '@/services/aiService';
-import { Question } from '@/types/medical';
+import { EnhancedQuestionGeneratorService, PhaseTransitionData } from '@/services/clinical/EnhancedQuestionGeneratorService';
+import { Question, Answer } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
 import { QuestionComponent } from './QuestionComponent';
 import { ReviewOfSystemsComponent } from './ReviewOfSystemsComponent';
@@ -26,17 +26,30 @@ interface AssessmentWorkflowProps {
 
 export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: AssessmentWorkflowProps) {
   const { state, dispatch } = useMedical();
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  // Phase 1 questions state
+  const [phase1Questions, setPhase1Questions] = useState<Question[]>([]);
+  const [phase1Answers, setPhase1Answers] = useState<Record<string, Answer>>({});
+  const [currentPhase1Index, setCurrentPhase1Index] = useState(0);
+  const [phase1Complete, setPhase1Complete] = useState(false);
+  
+  // Phase 2 questions state
+  const [phase2Questions, setPhase2Questions] = useState<Question[]>([]);
+  const [currentPhase2Index, setCurrentPhase2Index] = useState(0);
+  const [phase2Complete, setPhase2Complete] = useState(false);
+  const [phase2Triggered, setPhase2Triggered] = useState(false);
+  
+  // Transition data
+  const [phaseTransition, setPhaseTransition] = useState<PhaseTransitionData | null>(null);
+  
+  // General state
+  const [currentPhase, setCurrentPhase] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showROS, setShowROS] = useState(false);
   const [showPMH, setShowPMH] = useState(false);
   const [showPE, setShowPE] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [questionsGenerated, setQuestionsGenerated] = useState(false);
-  const [aiServiceHealthy, setAiServiceHealthy] = useState<boolean | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   const saveQuestionsMutation = useSaveQuestions();
   const saveAnswerMutation = useSaveAnswer();
@@ -52,175 +65,201 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
 
   useEffect(() => {
     console.log('AssessmentWorkflow mounted for chief complaint:', chiefComplaint);
-    loadQuestions();
+    loadPhase1Questions();
   }, [chiefComplaint]);
 
-  const testAIService = async (): Promise<boolean> => {
-    try {
-      console.log('Testing AI service health...');
-      const testQuestions = await AIService.generateQuestions('test headache for system check');
-      const isHealthy = testQuestions && testQuestions.length > 0;
-      setAiServiceHealthy(isHealthy);
-      console.log('AI service health check result:', isHealthy);
-      return isHealthy;
-    } catch (error) {
-      console.error('AI service health check failed:', error);
-      setAiServiceHealthy(false);
-      return false;
-    }
-  };
-
-  const loadQuestions = async () => {
+  const loadPhase1Questions = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log(`Loading questions for chief complaint: ${chiefComplaint} (attempt ${retryCount + 1})`);
+      console.log(`Loading Phase 1 questions for: ${chiefComplaint}`);
       
-      // Test AI service first
-      const aiHealthy = await testAIService();
+      // Generate Phase 1 questions using clinical templates
+      const questions = EnhancedQuestionGeneratorService.generatePhase1Questions(chiefComplaint);
+      console.log(`Generated ${questions.length} Phase 1 clinical questions`);
       
-      if (!aiHealthy && retryCount === 0) {
-        console.warn('AI service appears unhealthy on first attempt, trying anyway...');
-      }
+      setPhase1Questions(questions);
       
-      const generatedQuestions = await AIService.generateQuestions(chiefComplaint);
-      console.log(`Generated ${generatedQuestions.length} questions:`, generatedQuestions.map(q => ({ id: q.id, text: q.text.substring(0, 50) + '...' })));
-      
-      // Validate all questions have proper UUIDs
-      const invalidQuestions = generatedQuestions.filter(q => !q.id || typeof q.id !== 'string' || q.id.length < 36);
-      if (invalidQuestions.length > 0) {
-        console.error(`${invalidQuestions.length} questions have invalid IDs:`, invalidQuestions);
-        throw new Error(`Generated questions have invalid UUID format`);
-      }
-      
-      setAiServiceHealthy(true);
-      
-      // Save questions to database BEFORE showing them to user
-      if (state.currentAssessment && !questionsGenerated) {
-        console.log(`Saving ${generatedQuestions.length} questions to database for assessment: ${state.currentAssessment.id}`);
+      // Save Phase 1 questions to database if we have an assessment
+      if (state.currentAssessment && questions.length > 0) {
+        console.log(`Saving ${questions.length} Phase 1 questions to database`);
         try {
           await saveQuestionsMutation.mutateAsync({
             assessmentId: state.currentAssessment.id,
-            questions: generatedQuestions
+            questions: questions
           });
-          setQuestionsGenerated(true);
-          console.log('Questions saved successfully to database');
-          
-          // Only set questions in state AFTER successful database save
-          setQuestions(generatedQuestions);
-          toast.success(`${generatedQuestions.length} questions loaded and saved`);
+          console.log('Phase 1 questions saved successfully');
         } catch (saveError) {
-          console.error(`Failed to save questions: ${saveError.message}`);
-          toast.error('Failed to save questions to database. Please try again.');
-          throw new Error(`Failed to save questions: ${saveError.message}`);
+          console.error('Failed to save Phase 1 questions:', saveError);
+          // Continue anyway with local questions
         }
-      } else {
-        // If questions already generated, just set them
-        setQuestions(generatedQuestions);
       }
       
-      setRetryCount(0); // Reset retry count on success
     } catch (err) {
-      console.error(`Error loading questions (attempt ${retryCount + 1}):`, err);
-      setError(`Failed to load questions: ${err.message || 'Unknown error'}`);
-      setAiServiceHealthy(false);
-      
-      if (retryCount < 2) {
-        console.log(`Will retry loading questions (attempt ${retryCount + 2}/3)`);
-        toast.error(`Failed to load questions (attempt ${retryCount + 1}/3). Retrying...`);
-      } else {
-        toast.error('Failed to generate questions after 3 attempts. Please check system health.');
-      }
+      console.error('Error loading Phase 1 questions:', err);
+      setError(`Failed to load Phase 1 questions: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRetryQuestions = async () => {
-    setRetryCount(prev => prev + 1);
-    await loadQuestions();
-  };
-
   const handleAnswerSubmit = async (questionId: string, answer: any) => {
-    console.log(`Submitting answer for question ${questionId}:`, answer);
+    console.log(`Submitting answer for question ${questionId} in Phase ${currentPhase}:`, answer);
     
     if (!state.currentAssessment) {
       console.error('No current assessment found');
       toast.error('Assessment session lost. Please restart assessment.');
-      setError('Assessment session lost. Please restart assessment.');
       return;
     }
-
-    // Validate question ID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(questionId)) {
-      console.error(`Invalid question ID format: ${questionId}`);
-      toast.error('Invalid question ID format. Please try again.');
-      setError(`Invalid question ID format: ${questionId}`);
-      return;
-    }
-
-    // Validate answer format - be more lenient with validation
-    if (!answer || (typeof answer.value === 'undefined' && typeof answer.value !== 'number' && typeof answer.value !== 'boolean')) {
-      console.error('Invalid answer format:', answer);
-      toast.error('Invalid answer format. Please provide a valid answer.');
-      return;
-    }
-
-    // Log detailed answer submission info for debugging
-    console.log('Answer submission details:', {
-      questionId,
-      answerValue: answer.value,
-      answerType: typeof answer.value,
-      notes: answer.notes,
-      assessmentId: state.currentAssessment.id
-    });
 
     try {
-      // Update local state first
+      // Create answer object
+      const answerObj: Answer = {
+        questionId,
+        value: answer.value,
+        notes: answer.notes
+      };
+
+      // Update local phase answers
+      if (currentPhase === 1) {
+        const newPhase1Answers = { ...phase1Answers, [questionId]: answerObj };
+        setPhase1Answers(newPhase1Answers);
+      }
+
+      // Update global context
       dispatch({
         type: 'ADD_ANSWER',
         payload: {
           questionId,
-          answer: {
-            questionId,
-            value: answer.value,
-            notes: answer.notes
-          }
+          answer: answerObj
         }
       });
-      console.log('Answer added to local state');
 
       // Save to database
-      console.log('Attempting to save answer to database...');
       await saveAnswerMutation.mutateAsync({
         assessmentId: state.currentAssessment.id,
         questionId,
-        answer: {
-          questionId,
-          value: answer.value,
-          notes: answer.notes
-        }
+        answer: answerObj
       });
       
-      console.log('Answer saved successfully to database');
-      toast.success('Answer saved successfully');
+      console.log('Answer saved successfully');
+      toast.success('Answer saved');
 
-      // Proceed to next question or next step
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-        console.log(`Moving to question ${currentQuestionIndex + 2} of ${questions.length}`);
-      } else {
-        console.log('All questions answered, proceeding to Review of Systems');
-        setShowROS(true);
-        await updateStep(2);
+      // Handle question progression
+      if (currentPhase === 1) {
+        await handlePhase1Progression(questionId, answerObj);
+      } else if (currentPhase === 2) {
+        await handlePhase2Progression();
       }
 
     } catch (error) {
       console.error(`Error saving answer: ${error.message}`);
       toast.error(`Failed to save answer: ${error.message}`);
-      setError(`Failed to save your answer: ${error.message}. Please try again.`);
+      setError(`Failed to save your answer. Please try again.`);
     }
+  };
+
+  const handlePhase1Progression = async (questionId: string, answer: Answer) => {
+    const updatedAnswers = { ...phase1Answers, [questionId]: answer };
+    
+    if (currentPhase1Index < phase1Questions.length - 1) {
+      // Move to next Phase 1 question
+      setCurrentPhase1Index(prev => prev + 1);
+    } else {
+      // Phase 1 complete - analyze answers and determine if Phase 2 is needed
+      console.log('Phase 1 complete, analyzing answers...');
+      
+      try {
+        const transitionData = EnhancedQuestionGeneratorService.analyzePhase1Completion(
+          chiefComplaint, 
+          updatedAnswers
+        );
+        
+        setPhaseTransition(transitionData);
+        setPhase1Complete(true);
+        
+        // Save Phase 1 completion
+        if (state.currentAssessment) {
+          await EnhancedQuestionGeneratorService.savePhaseCompletion(
+            state.currentAssessment.id,
+            1,
+            updatedAnswers,
+            transitionData.answerAnalysis
+          );
+        }
+        
+        if (transitionData.phase2Triggered && transitionData.answerAnalysis) {
+          // Generate Phase 2 questions
+          console.log('Phase 2 triggered, generating adaptive questions...');
+          setLoading(true);
+          
+          try {
+            const phase2Qs = await EnhancedQuestionGeneratorService.generatePhase2Questions(
+              chiefComplaint,
+              updatedAnswers,
+              transitionData.answerAnalysis
+            );
+            
+            setPhase2Questions(phase2Qs);
+            setPhase2Triggered(true);
+            setCurrentPhase(2);
+            
+            // Save Phase 2 questions to database
+            if (state.currentAssessment && phase2Qs.length > 0) {
+              await saveQuestionsMutation.mutateAsync({
+                assessmentId: state.currentAssessment.id,
+                questions: phase2Qs
+              });
+            }
+            
+            toast.success(`Phase 2 activated: ${phase2Qs.length} follow-up questions generated`);
+            
+          } catch (error) {
+            console.error('Failed to generate Phase 2 questions:', error);
+            toast.error('Failed to generate follow-up questions. Proceeding to next section.');
+            // Continue to ROS even if Phase 2 fails
+            proceedToROS();
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          console.log('Phase 2 not triggered, proceeding to Review of Systems');
+          proceedToROS();
+        }
+        
+      } catch (error) {
+        console.error('Error analyzing Phase 1 completion:', error);
+        toast.error('Error analyzing responses. Proceeding to next section.');
+        proceedToROS();
+      }
+    }
+  };
+
+  const handlePhase2Progression = async () => {
+    if (currentPhase2Index < phase2Questions.length - 1) {
+      // Move to next Phase 2 question
+      setCurrentPhase2Index(prev => prev + 1);
+    } else {
+      // Phase 2 complete
+      console.log('Phase 2 complete, proceeding to Review of Systems');
+      setPhase2Complete(true);
+      
+      // Save Phase 2 completion
+      if (state.currentAssessment) {
+        await EnhancedQuestionGeneratorService.savePhaseCompletion(
+          state.currentAssessment.id,
+          2,
+          state.answers // All answers including Phase 2
+        );
+      }
+      
+      proceedToROS();
+    }
+  };
+
+  const proceedToROS = async () => {
+    setShowROS(true);
+    await updateStep(2);
   };
 
   const handleROSComplete = async () => {
@@ -259,13 +298,47 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
     onComplete();
   };
 
-  const progressPercent = showSummary ? 100 : 
-    showPE ? 80 : 
-    showPMH ? 60 : 
-    showROS ? 40 : 
-    (currentQuestionIndex / Math.max(questions.length, 1)) * 30;
+  // Calculate progress based on current phase and completion
+  const calculateProgress = () => {
+    if (showSummary) return 100;
+    if (showPE) return 80;
+    if (showPMH) return 60;
+    if (showROS) return 40;
+    
+    if (currentPhase === 1 && phase1Questions.length > 0) {
+      return (currentPhase1Index / phase1Questions.length) * 25; // Phase 1 is 25% of total
+    } else if (currentPhase === 2 && phase2Questions.length > 0) {
+      return 25 + ((currentPhase2Index / phase2Questions.length) * 15); // Phase 2 is additional 15%
+    }
+    
+    return 0;
+  };
 
+  const getCurrentQuestion = (): Question | null => {
+    if (currentPhase === 1 && phase1Questions.length > 0) {
+      return phase1Questions[currentPhase1Index] || null;
+    } else if (currentPhase === 2 && phase2Questions.length > 0) {
+      return phase2Questions[currentPhase2Index] || null;
+    }
+    return null;
+  };
+
+  const getCurrentQuestionNumber = (): number => {
+    if (currentPhase === 1) {
+      return currentPhase1Index + 1;
+    } else if (currentPhase === 2) {
+      return phase1Questions.length + currentPhase2Index + 1;
+    }
+    return 1;
+  };
+
+  const getTotalQuestions = (): number => {
+    return phase1Questions.length + (phase2Questions.length || 0);
+  };
+
+  const progressPercent = calculateProgress();
   const answeredCount = Object.keys(state.answers).length;
+  const currentQuestion = getCurrentQuestion();
 
   if (loading) {
     return (
@@ -274,11 +347,18 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
           <CardContent className="p-8">
             <LoadingState />
             <div className="mt-4 text-center">
-              <p className="text-gray-600">Loading questions for: {chiefComplaint}</p>
-              {aiServiceHealthy === false && (
-                <p className="text-orange-600 text-sm mt-2">
-                  AI service may be experiencing issues. Using fallback questions if needed.
-                </p>
+              <p className="text-gray-600">
+                {currentPhase === 1 ? 'Loading Phase 1 clinical questions' : 'Generating Phase 2 follow-up questions'} for: {chiefComplaint}
+              </p>
+              {phaseTransition && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">
+                    Phase 1 complete. Risk level: {phaseTransition.overallRiskLevel}
+                  </p>
+                  {phaseTransition.phase2Triggered && (
+                    <p className="text-sm text-blue-600">Generating targeted follow-up questions...</p>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
@@ -339,7 +419,7 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
+  // Current question is already defined above as currentQuestion via getCurrentQuestion()
 
   return (
     <div className="p-6">
@@ -354,42 +434,18 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
             answersCount={answeredCount}
           />
 
-          {/* AI Service Status */}
-          {aiServiceHealthy !== null && (
-            <div className="mt-4">
-              {aiServiceHealthy ? (
-                <Alert className="border-green-200 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
-                    AI service is operational. Generated {questions.length} questions.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    AI service is experiencing issues. Using fallback questions to continue assessment.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          )}
-
-          {/* Error Alert */}
-          {error && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Progress Stats */}
+          {/* Phase Progress Stats */}
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <div className="flex justify-between text-sm text-gray-600">
-              <span>Questions: {currentQuestionIndex + 1} of {questions.length}</span>
+              <span>Phase {currentPhase}: Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</span>
               <span>Answers saved: {answeredCount}</span>
               <span>Progress: {Math.round(progressPercent)}%</span>
             </div>
+            {phaseTransition && (
+              <div className="text-xs text-gray-500 mt-1">
+                Risk Level: {phaseTransition.overallRiskLevel} | Phase 2: {phase2Triggered ? 'Active' : 'Not triggered'}
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -398,41 +454,26 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
             <QuestionComponent
               question={currentQuestion}
               onSubmit={handleAnswerSubmit}
-              questionNumber={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
+              questionNumber={getCurrentQuestionNumber()}
+              totalQuestions={getTotalQuestions()}
             />
           ) : (
             <div className="text-center py-8">
               <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Available</h3>
               <p className="text-gray-600 mb-4">
-                Unable to load questions for this assessment. This may be due to AI service issues.
+                Unable to load questions for this assessment.
               </p>
-              <Button onClick={handleRetryQuestions} className="mr-4">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry Loading Questions
-              </Button>
             </div>
           )}
 
           <div className="flex justify-between mt-8">
             <Button 
               variant="outline" 
-              onClick={currentQuestionIndex > 0 ? () => setCurrentQuestionIndex(prev => prev - 1) : onBack}
+              onClick={onBack}
             >
-              {currentQuestionIndex > 0 ? 'Previous Question' : 'Back to Chief Complaint'}
+              Back to Chief Complaint
             </Button>
-            
-            {error && questions.length === 0 && (
-              <Button 
-                onClick={handleRetryQuestions}
-                variant="outline"
-                className="ml-4"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry Questions ({retryCount + 1}/3)
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>

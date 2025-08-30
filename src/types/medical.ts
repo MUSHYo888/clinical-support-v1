@@ -22,10 +22,15 @@ export interface Assessment {
 export interface Question {
   id: string;
   text: string;
-  type: 'multiple-choice' | 'yes-no' | 'text' | 'scale';
+  type: 'multiple-choice' | 'yes-no' | 'text' | 'scale' | 'multiple-choice-with-text';
   options?: string[];
   category: string;
   required: boolean;
+  phase?: 1 | 2;
+  clinicalPriority?: 1 | 2 | 3 | 4 | 5;
+  redFlagIndicator?: boolean;
+  questionRationale?: string;
+  followUpTrigger?: string;
 }
 
 export interface Answer {

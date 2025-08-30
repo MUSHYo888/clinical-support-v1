@@ -19,12 +19,19 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
   const [answer, setAnswer] = useState<string | number>('');
   const [notes, setNotes] = useState('');
   const [scaleValue, setScaleValue] = useState([5]);
+  const [additionalText, setAdditionalText] = useState('');
 
   const handleSubmit = () => {
     let finalAnswer = answer;
+    let combinedNotes = notes.trim();
     
     if (question.type === 'scale') {
       finalAnswer = scaleValue[0];
+    } else if (question.type === 'multiple-choice-with-text') {
+      // For multiple choice with text, combine the selection and additional text
+      if (additionalText.trim()) {
+        combinedNotes = combinedNotes ? `${combinedNotes}. Additional details: ${additionalText.trim()}` : additionalText.trim();
+      }
     }
     
     // More lenient validation - allow empty answers for non-required questions
@@ -34,17 +41,18 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
       return;
     }
 
-    console.log('Submitting answer:', { questionId: question.id, finalAnswer, notes: notes.trim() });
+    console.log('Submitting answer:', { questionId: question.id, finalAnswer, notes: combinedNotes });
 
     onSubmit(question.id, {
       value: finalAnswer,
-      notes: notes.trim() || undefined
+      notes: combinedNotes || undefined
     });
 
     // Reset for next question
     setAnswer('');
     setNotes('');
     setScaleValue([5]);
+    setAdditionalText('');
   };
 
   const canSubmit = () => {
@@ -72,7 +80,28 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
       </div>
 
       <div className="bg-gray-50 p-6 rounded-lg">
-        <h2 className="text-xl font-medium mb-6">{question.text}</h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-medium mb-2">{question.text}</h2>
+          {question.phase && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`px-2 py-1 text-xs rounded-full ${
+                question.phase === 1 ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                Phase {question.phase} {question.phase === 1 ? 'Clinical Assessment' : 'Follow-up Questions'}
+              </span>
+              {question.redFlagIndicator && (
+                <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
+                  Red Flag Screening
+                </span>
+              )}
+            </div>
+          )}
+          {question.questionRationale && (
+            <p className="text-sm text-gray-600 italic">
+              Clinical Note: {question.questionRationale}
+            </p>
+          )}
+        </div>
 
         {/* Multiple Choice */}
         {question.type === 'multiple-choice' && question.options && (
@@ -88,6 +117,38 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
               ))}
             </div>
           </RadioGroup>
+        )}
+
+        {/* Multiple Choice with Text Input */}
+        {question.type === 'multiple-choice-with-text' && question.options && (
+          <div className="space-y-4">
+            <RadioGroup value={answer.toString()} onValueChange={setAnswer}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {question.options.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    <Label htmlFor={`option-${index}`} className="cursor-pointer">
+                      {option}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+            
+            <div className="mt-4">
+              <Label htmlFor="additional-text" className="text-sm font-medium">
+                Additional details or "Other" explanation:
+              </Label>
+              <Textarea
+                id="additional-text"
+                value={additionalText}
+                onChange={(e) => setAdditionalText(e.target.value)}
+                placeholder="Please provide any additional details about your selection or describe if 'Other'..."
+                rows={2}
+                className="mt-2"
+              />
+            </div>
+          </div>
         )}
 
         {/* Yes/No */}
