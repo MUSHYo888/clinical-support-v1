@@ -26,7 +26,7 @@ import {
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
 import { TreatmentManagementService } from '@/services/treatmentManagementService';
-import { useMedical } from '@/contexts/MedicalContext';
+import { useMedical } from '@/context/MedicalContext';
 import { toast } from 'sonner';
 
 interface ClinicalDecisionSupportProps {
@@ -106,7 +106,7 @@ export function ClinicalDecisionSupport({
       const treatment = TreatmentManagementService.generateTreatmentRecommendation(
         chiefComplaint,
         'moderate', // Default severity, could be determined by AI
-        state.patient,
+        state.currentPatient,
         []
       );
       setTreatmentRecommendation(treatment);
