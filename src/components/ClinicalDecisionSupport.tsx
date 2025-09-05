@@ -1,7 +1,7 @@
 // ABOUTME: Unified clinical decision support component integrating investigations and treatment planning
 // ABOUTME: Provides seamless workflow between diagnostic testing and therapeutic decisions
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
 import { 
   Microscope, 
   Pill, 
@@ -22,7 +23,11 @@ import {
   Shield,
   DollarSign,
   Clock,
-  Loader2
+  Loader2,
+  Info,
+  Zap,
+  Target,
+  Circle
 } from 'lucide-react';
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
@@ -35,6 +40,7 @@ interface ClinicalDecisionSupportProps {
   chiefComplaint: string;
   onComplete: (clinicalPlan: ClinicalPlan) => void;
   onBack: () => void;
+  onNavigateToStep?: (step: string) => void;
 }
 
 interface ClinicalPlan {
@@ -54,7 +60,8 @@ interface ClinicalPlan {
 export function ClinicalDecisionSupport({
   chiefComplaint,
   onComplete,
-  onBack
+  onBack,
+  onNavigateToStep
 }: ClinicalDecisionSupportProps) {
   const [activeTab, setActiveTab] = useState('investigations');
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
@@ -66,6 +73,8 @@ export function ClinicalDecisionSupport({
   const [investigationIntelligence, setInvestigationIntelligence] = useState<any[]>([]);
   const [treatmentRecommendation, setTreatmentRecommendation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { state } = useMedical();
   const saveClinicalPlanMutation = useSaveClinicalDecisionSupport();
@@ -86,6 +95,25 @@ export function ClinicalDecisionSupport({
   useEffect(() => {
     loadClinicalData();
   }, [recommendations]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (selectedInvestigations.length > 0 || selectedMedications.length > 0 || clinicalNotes.trim()) {
+        handleAutoSave();
+      }
+    }, 3000); // Auto-save after 3 seconds of inactivity
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan]);
 
   const loadClinicalData = async () => {
     try {
@@ -155,10 +183,67 @@ export function ClinicalDecisionSupport({
   const getCompletionStatus = () => {
     const investigationsSelected = selectedInvestigations.length > 0;
     const treatmentSelected = selectedMedications.length > 0 || selectedNonPharm.length > 0;
-    return { investigationsSelected, treatmentSelected };
+    const hasRationale = investigationRationale.trim() !== '';
+    const hasFollowUp = followUpPlan.trim() !== '';
+    return { investigationsSelected, treatmentSelected, hasRationale, hasFollowUp };
+  };
+
+  const validateClinicalPlan = () => {
+    const errors: string[] = [];
+    
+    if (selectedInvestigations.length === 0) {
+      errors.push('At least one investigation must be selected');
+    }
+    
+    if (selectedMedications.length === 0 && selectedNonPharm.length === 0) {
+      errors.push('At least one treatment option must be selected');
+    }
+    
+    if (!investigationRationale.trim()) {
+      errors.push('Investigation rationale is required');
+    }
+    
+    if (!followUpPlan.trim()) {
+      errors.push('Follow-up plan is required');
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  const handleAutoSave = async () => {
+    const clinicalPlan: ClinicalPlan = {
+      investigations: {
+        selected: selectedInvestigations,
+        rationale: investigationRationale,
+        estimatedCost: calculateTotalCost()
+      },
+      treatment: {
+        medications: selectedMedications,
+        nonPharmacological: selectedNonPharm,
+        followUp: followUpPlan
+      },
+      clinicalNotes
+    };
+
+    if (state.currentAssessment) {
+      try {
+        await saveClinicalPlanMutation.mutateAsync({
+          assessmentId: state.currentAssessment.id,
+          clinicalPlan
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }
   };
 
   const handleSaveClinicalPlan = async () => {
+    if (!validateClinicalPlan()) {
+      toast.error('Please complete all required fields before proceeding');
+      return;
+    }
+
     const clinicalPlan: ClinicalPlan = {
       investigations: {
         selected: selectedInvestigations,
@@ -189,8 +274,24 @@ export function ClinicalDecisionSupport({
     }
   };
 
-  const { investigationsSelected, treatmentSelected } = getCompletionStatus();
-  const canProceed = investigationsSelected && treatmentSelected;
+  const { investigationsSelected, treatmentSelected, hasRationale, hasFollowUp } = getCompletionStatus();
+  const canProceed = investigationsSelected && treatmentSelected && hasRationale && hasFollowUp;
+
+  // Breadcrumb steps
+  const breadcrumbSteps = [
+    { id: 'history', label: 'History', completed: true, current: false, clickable: true },
+    { id: 'ros', label: 'Review of Systems', completed: true, current: false, clickable: true },
+    { id: 'pmh', label: 'Past Medical History', completed: true, current: false, clickable: true },
+    { id: 'physical', label: 'Physical Exam', completed: true, current: false, clickable: true },
+    { id: 'clinical-support', label: 'Clinical Decision Support', completed: false, current: true, clickable: false },
+    { id: 'summary', label: 'Patient Summary', completed: false, current: false, clickable: false }
+  ];
+
+  const handleBreadcrumbClick = (stepId: string) => {
+    if (onNavigateToStep) {
+      onNavigateToStep(stepId);
+    }
+  };
 
   if (loading || aiLoading) {
     return (
@@ -214,6 +315,8 @@ export function ClinicalDecisionSupport({
     <div className="p-6">
       <Card className="max-w-6xl mx-auto">
         <CardHeader>
+          <BreadcrumbNavigation steps={breadcrumbSteps} onStepClick={handleBreadcrumbClick} />
+          
           <CardTitle className="text-2xl flex items-center space-x-2">
             <Brain className="h-6 w-6 text-primary" />
             <span>Clinical Decision Support</span>
@@ -222,20 +325,58 @@ export function ClinicalDecisionSupport({
             Chief Complaint: <span className="font-medium">{chiefComplaint}</span>
           </p>
           
-          {/* Progress Indicators */}
-          <div className="flex space-x-4 mt-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${investigationsSelected ? 'bg-green-500' : 'bg-gray-300'}`} />
-              <span className="text-sm">Investigations</span>
+          {/* Enhanced Progress Indicators */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+              <div className={`w-3 h-3 rounded-full ${investigationsSelected ? 'bg-success' : 'bg-muted-foreground/40'}`} />
+              <span className="text-sm font-medium">Investigations</span>
+              {investigationsSelected && <CheckCircle2 className="h-4 w-4 text-success" />}
             </div>
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${treatmentSelected ? 'bg-green-500' : 'bg-gray-300'}`} />
-              <span className="text-sm">Treatment</span>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+              <div className={`w-3 h-3 rounded-full ${treatmentSelected ? 'bg-success' : 'bg-muted-foreground/40'}`} />
+              <span className="text-sm font-medium">Treatment</span>
+              {treatmentSelected && <CheckCircle2 className="h-4 w-4 text-success" />}
+            </div>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+              <div className={`w-3 h-3 rounded-full ${hasRationale ? 'bg-success' : 'bg-muted-foreground/40'}`} />
+              <span className="text-sm font-medium">Rationale</span>
+              {hasRationale && <CheckCircle2 className="h-4 w-4 text-success" />}
+            </div>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+              <div className={`w-3 h-3 rounded-full ${hasFollowUp ? 'bg-success' : 'bg-muted-foreground/40'}`} />
+              <span className="text-sm font-medium">Follow-up</span>
+              {hasFollowUp && <CheckCircle2 className="h-4 w-4 text-success" />}
             </div>
           </div>
+          
+          {/* Auto-save indicator */}
+          {saveClinicalPlanMutation.isPending && (
+            <Alert className="mt-4">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <AlertDescription>Auto-saving clinical plan...</AlertDescription>
+            </Alert>
+          )}
         </CardHeader>
 
         <CardContent>
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <Alert className="mb-6 border-destructive">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertDescription>
+                <div className="font-medium text-destructive mb-2">Please complete the following:</div>
+                <ul className="text-sm space-y-1">
+                  {validationErrors.map((error, index) => (
+                    <li key={index} className="flex items-center space-x-2">
+                      <Circle className="h-2 w-2 fill-current" />
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* AI Error Alert */}
           {aiError && (
             <Alert className="mb-6 border-warning bg-warning/10">
@@ -314,30 +455,98 @@ export function ClinicalDecisionSupport({
                             </Badge>
                           </div>
 
-                          {/* Cost-Benefit Display */}
-                          <div className="grid grid-cols-3 gap-4 mb-3 p-3 bg-muted rounded-lg">
-                            <div>
-                              <div className="flex items-center space-x-2 mb-1">
+                          {/* Enhanced Cost-Benefit Display */}
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 p-4 bg-muted/50 rounded-lg border">
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
                                 <DollarSign className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-medium">Cost</span>
+                                <span className="text-sm font-medium">Cost Analysis</span>
                               </div>
-                              <p className="text-sm">${item.intelligence.costBenefit.estimatedCost}</p>
+                              <p className="text-lg font-semibold">${item.intelligence.costBenefit.estimatedCost}</p>
+                              <Badge variant="outline" className="text-xs">
+                                {item.intelligence.costBenefit.costCategory.replace('-', ' ')}
+                              </Badge>
                             </div>
-                            <div>
-                              <div className="flex items-center space-x-2 mb-1">
-                                <TrendingUp className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-medium">Yield</span>
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <Target className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium">Diagnostic Yield</span>
                               </div>
-                              <Progress value={item.intelligence.costBenefit.diagnosticYield} className="h-2" />
+                              <div className="space-y-1">
+                                <Progress value={item.intelligence.costBenefit.diagnosticYield} className="h-3" />
+                                <p className="text-sm font-semibold">{item.intelligence.costBenefit.diagnosticYield}%</p>
+                              </div>
                             </div>
-                            <div>
-                              <div className="flex items-center space-x-2 mb-1">
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <Zap className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium">Clinical Benefit</span>
+                              </div>
+                              <div className="space-y-1">
+                                <Progress value={item.intelligence.costBenefit.clinicalBenefit * 10} className="h-3" />
+                                <p className="text-sm font-semibold">{item.intelligence.costBenefit.clinicalBenefit}/10</p>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
                                 <Clock className="h-4 w-4 text-primary" />
                                 <span className="text-sm font-medium">Timing</span>
                               </div>
-                              <p className="text-xs">{item.timing}</p>
+                              <p className="text-sm font-semibold">{item.timing}</p>
+                              <p className="text-xs text-muted-foreground">Priority {item.priority}</p>
                             </div>
                           </div>
+
+                          {/* Enhanced Contraindications & Safety */}
+                          {item.intelligence.contraindications.riskAssessment !== 'low' && (
+                            <Alert className="mb-3 border-warning bg-warning/10">
+                              <Shield className="h-4 w-4 text-warning" />
+                              <AlertDescription>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-warning-foreground">Safety Assessment</span>
+                                  <Badge variant="outline" className="bg-warning/20 text-warning-foreground">
+                                    {item.intelligence.contraindications.riskAssessment} risk
+                                  </Badge>
+                                </div>
+                                
+                                {item.intelligence.contraindications.contraindications.length > 0 && (
+                                  <div className="mb-2">
+                                    <p className="text-sm font-medium mb-1">Contraindications:</p>
+                                    {item.intelligence.contraindications.contraindications.map((contraindication, idx) => (
+                                      <p key={idx} className="text-sm flex items-center space-x-2">
+                                        <Badge variant={contraindication.type === 'absolute' ? 'destructive' : 'secondary'} className="text-xs">
+                                          {contraindication.type}
+                                        </Badge>
+                                        <span>{contraindication.condition}</span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {item.intelligence.contraindications.warnings.length > 0 && (
+                                  <div className="mb-2">
+                                    <p className="text-sm font-medium mb-1">Warnings:</p>
+                                    {item.intelligence.contraindications.warnings.map((warning, idx) => (
+                                      <p key={idx} className="text-sm">• {warning.description}</p>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {item.intelligence.contraindications.alternativeRecommendations.length > 0 && (
+                                  <div>
+                                    <p className="text-sm font-medium mb-1">Alternative Investigations:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {item.intelligence.contraindications.alternativeRecommendations.map((alt, idx) => (
+                                        <Badge key={idx} variant="secondary" className="text-xs">
+                                          {alt}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </AlertDescription>
+                            </Alert>
+                          )}
 
                           <p className="text-sm text-muted-foreground">{item.clinicalRationale}</p>
                         </div>
@@ -348,13 +557,20 @@ export function ClinicalDecisionSupport({
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-3">Investigation Rationale</h3>
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <Info className="h-5 w-5 text-primary mr-2" />
+                  Investigation Rationale
+                  <span className="text-destructive ml-1">*</span>
+                </h3>
                 <Textarea
                   value={investigationRationale}
                   onChange={(e) => setInvestigationRationale(e.target.value)}
-                  placeholder="Provide clinical reasoning for selected investigations..."
-                  className="min-h-[100px]"
+                  placeholder="Provide detailed clinical reasoning for selected investigations, considering cost-benefit analysis and patient-specific factors..."
+                  className={`min-h-[120px] ${!hasRationale && validationErrors.length > 0 ? 'border-destructive' : ''}`}
                 />
+                {!hasRationale && validationErrors.length > 0 && (
+                  <p className="text-sm text-destructive mt-1">Clinical rationale is required</p>
+                )}
               </div>
             </TabsContent>
 
@@ -419,13 +635,20 @@ export function ClinicalDecisionSupport({
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Follow-up Plan</h3>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <Clock className="h-5 w-5 text-primary mr-2" />
+                      Follow-up Plan
+                      <span className="text-destructive ml-1">*</span>
+                    </h3>
                     <Textarea
                       value={followUpPlan}
                       onChange={(e) => setFollowUpPlan(e.target.value)}
-                      placeholder="Outline follow-up requirements, monitoring, and next steps..."
-                      className="min-h-[100px]"
+                      placeholder="Outline specific follow-up requirements, monitoring plans, timeframes, and next steps for patient care..."
+                      className={`min-h-[120px] ${!hasFollowUp && validationErrors.length > 0 ? 'border-destructive' : ''}`}
                     />
+                    {!hasFollowUp && validationErrors.length > 0 && (
+                      <p className="text-sm text-destructive mt-1">Follow-up plan is required</p>
+                    )}
                   </div>
                 </>
               )}
