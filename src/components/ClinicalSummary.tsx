@@ -20,6 +20,7 @@ import { MedicalHistorySummary } from './clinical/MedicalHistorySummary';
 import { ClinicalDecisionSummary } from './clinical/ClinicalDecisionSummary';
 import { PDFExportButton } from './reports/PDFExportButton';
 import { SOAPNotesEditor } from './documentation/SOAPNotesEditor';
+import { ReferralLetterGenerator } from './ReferralLetterGenerator';
 
 interface ClinicalSummaryProps {
   chiefComplaint: string;
@@ -34,7 +35,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSOAPEditor, setShowSOAPEditor] = useState(false);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
+  const [showReferralGenerator, setShowReferralGenerator] = useState(false);
   
   const completeAssessmentMutation = useCompleteAssessment();
   const { data: clinicalDecisionData, isLoading: clinicalDecisionLoading } = useGetClinicalDecisionSupport(
@@ -110,6 +111,11 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     toast.success('SOAP note documentation completed');
   };
 
+  const handleReferralSaved = () => {
+    setShowReferralGenerator(false);
+    toast.success('Referral letter saved successfully');
+  };
+
   if (loading || clinicalDecisionLoading) {
     return (
       <div className="p-6">
@@ -132,6 +138,21 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
         assessmentId={state.currentAssessment?.id || ''}
         onSave={handleSOAPNoteSaved}
         onCancel={() => setShowSOAPEditor(false)}
+      />
+    );
+  }
+
+  if (showReferralGenerator && state.currentAssessment && state.currentPatient) {
+    return (
+      <ReferralLetterGenerator
+        assessmentId={state.currentAssessment.id}
+        patient={state.currentPatient}
+        chiefComplaint={chiefComplaint}
+        differentials={differentials}
+        answers={state.answers}
+        rosData={state.rosData}
+        onSave={handleReferralSaved}
+        onCancel={() => setShowReferralGenerator(false)}
       />
     );
   }
@@ -195,7 +216,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
             </Button>
             
             <Button
-              onClick={() => setShowReferralDialog(true)}
+              onClick={() => setShowReferralGenerator(true)}
               variant="outline"
               className="flex items-center gap-2"
             >
