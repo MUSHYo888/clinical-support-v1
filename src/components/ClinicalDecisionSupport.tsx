@@ -32,6 +32,7 @@ import {
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
 import { TreatmentManagementService } from '@/services/treatmentManagementService';
+import { DifferentialDiagnosisEngine } from './DifferentialDiagnosisEngine';
 import { useMedical } from '@/context/MedicalContext';
 import { useSaveClinicalDecisionSupport } from '@/hooks/useClinicalDecisionSupport';
 import { toast } from 'sonner';
@@ -408,7 +409,11 @@ export function ClinicalDecisionSupport({
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="diagnosis" className="flex items-center space-x-2">
+                <Brain className="h-4 w-4" />
+                <span>AI Diagnosis</span>
+              </TabsTrigger>
               <TabsTrigger value="investigations" className="flex items-center space-x-2">
                 <Microscope className="h-4 w-4" />
                 <span>Investigations</span>
@@ -420,6 +425,18 @@ export function ClinicalDecisionSupport({
                 {treatmentSelected && <CheckCircle2 className="h-4 w-4 text-green-600" />}
               </TabsTrigger>
             </TabsList>
+
+            {/* AI Differential Diagnosis Tab */}
+            <TabsContent value="diagnosis" className="space-y-6">
+              <DifferentialDiagnosisEngine
+                chiefComplaint={chiefComplaint}
+                assessmentId={state.currentAssessment?.id}
+                onDiagnosisGenerated={(diagnoses) => {
+                  console.log('Generated diagnoses:', diagnoses);
+                  toast.success(`Generated ${diagnoses.length} differential diagnoses`);
+                }}
+              />
+            </TabsContent>
 
             {/* Investigations Tab */}
             <TabsContent value="investigations" className="space-y-6">
