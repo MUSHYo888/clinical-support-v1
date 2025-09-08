@@ -27,12 +27,14 @@ import {
   Info,
   Zap,
   Target,
-  Circle
+  Circle,
+  Calculator
 } from 'lucide-react';
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
 import { TreatmentManagementService } from '@/services/treatmentManagementService';
 import { DifferentialDiagnosisEngine } from './DifferentialDiagnosisEngine';
+import { ClinicalScoringSystem } from './ClinicalScoringSystem';
 import { useMedical } from '@/context/MedicalContext';
 import { useSaveClinicalDecisionSupport } from '@/hooks/useClinicalDecisionSupport';
 import { toast } from 'sonner';
@@ -409,10 +411,14 @@ export function ClinicalDecisionSupport({
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="diagnosis" className="flex items-center space-x-2">
                 <Brain className="h-4 w-4" />
                 <span>AI Diagnosis</span>
+              </TabsTrigger>
+              <TabsTrigger value="scoring" className="flex items-center space-x-2">
+                <Calculator className="h-4 w-4" />
+                <span>Clinical Scores</span>
               </TabsTrigger>
               <TabsTrigger value="investigations" className="flex items-center space-x-2">
                 <Microscope className="h-4 w-4" />
@@ -435,6 +441,14 @@ export function ClinicalDecisionSupport({
                   console.log('Generated diagnoses:', diagnoses);
                   toast.success(`Generated ${diagnoses.length} differential diagnoses`);
                 }}
+              />
+            </TabsContent>
+
+            {/* Clinical Scoring Systems Tab */}
+            <TabsContent value="scoring" className="space-y-6">
+              <ClinicalScoringSystem
+                chiefComplaint={chiefComplaint}
+                patientData={state.currentPatient}
               />
             </TabsContent>
 
