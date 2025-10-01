@@ -93,33 +93,33 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
   };
 
   return (
-    <div className="p-6">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">New Patient Registration</CardTitle>
-          <p className="text-center text-gray-600">
+    <div className="p-4 sm:p-6 animate-fade-in">
+      <Card className="max-w-2xl mx-auto shadow-lg">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-xl sm:text-2xl text-center">New Patient Registration</CardTitle>
+          <p className="text-center text-sm sm:text-base text-muted-foreground">
             Enter patient information to begin assessment
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Patient Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Enter patient's full name"
-                  className={errors.name ? 'border-red-500' : ''}
+                  className={`h-11 ${errors.name ? 'border-destructive' : ''}`}
                 />
-                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                {errors.name && <p className="text-destructive text-xs sm:text-sm">{errors.name}</p>}
               </div>
 
               {/* Age */}
               <div className="space-y-2">
-                <Label htmlFor="age">Age *</Label>
+                <Label htmlFor="age" className="text-sm font-medium">Age *</Label>
                 <Input
                   id="age"
                   type="number"
@@ -128,21 +128,21 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
                   placeholder="Enter age"
                   min="0"
                   max="150"
-                  className={errors.age ? 'border-red-500' : ''}
+                  className={`h-11 ${errors.age ? 'border-destructive' : ''}`}
                 />
-                {errors.age && <p className="text-red-500 text-sm">{errors.age}</p>}
+                {errors.age && <p className="text-destructive text-xs sm:text-sm">{errors.age}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Gender */}
               <div className="space-y-2">
-                <Label htmlFor="gender">Gender *</Label>
+                <Label htmlFor="gender" className="text-sm font-medium">Gender *</Label>
                 <Select
                   value={formData.gender}
                   onValueChange={(value) => handleInputChange('gender', value)}
                 >
-                  <SelectTrigger className={errors.gender ? 'border-red-500' : ''}>
+                  <SelectTrigger className={`h-11 ${errors.gender ? 'border-destructive' : ''}`}>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
@@ -151,49 +151,52 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
+                {errors.gender && <p className="text-destructive text-xs sm:text-sm">{errors.gender}</p>}
               </div>
 
               {/* Patient ID */}
               <div className="space-y-2">
-                <Label htmlFor="patientId">Patient ID</Label>
+                <Label htmlFor="patientId" className="text-sm font-medium">Patient ID</Label>
                 <Input
                   id="patientId"
                   value={formData.patientId}
                   onChange={(e) => handleInputChange('patientId', e.target.value)}
                   placeholder="Auto-generated if empty"
+                  className="h-11"
                 />
-                <p className="text-sm text-gray-500">Leave empty to auto-generate</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Leave empty to auto-generate</p>
               </div>
             </div>
 
             {/* Location */}
             <div className="space-y-2">
-              <Label htmlFor="location">Location/Ward *</Label>
+              <Label htmlFor="location" className="text-sm font-medium">Location/Ward *</Label>
               <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="Enter ward or department"
-                className={errors.location ? 'border-red-500' : ''}
+                className={`h-11 ${errors.location ? 'border-destructive' : ''}`}
               />
-              {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
+              {errors.location && <p className="text-destructive text-xs sm:text-sm">{errors.location}</p>}
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between pt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onCancel}
                 disabled={createPatientMutation.isPending}
+                className="h-11 sm:h-10 w-full sm:w-auto hover-lift"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
-                className="bg-teal-600 hover:bg-teal-700"
+                className="bg-primary hover:bg-primary/90 h-11 sm:h-10 w-full sm:w-auto hover-lift"
                 disabled={createPatientMutation.isPending}
+                size="lg"
               >
                 {createPatientMutation.isPending ? 'Creating...' : 'Create Patient'}
               </Button>

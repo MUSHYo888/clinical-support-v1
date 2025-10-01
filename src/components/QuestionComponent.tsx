@@ -69,35 +69,35 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">
+        <h3 className="text-base sm:text-lg font-medium">
           Question {questionNumber} of {totalQuestions}
         </h3>
         {question.required && (
-          <span className="text-sm text-red-500">* Required</span>
+          <span className="text-xs sm:text-sm text-destructive">* Required</span>
         )}
       </div>
 
-      <div className="bg-gray-50 p-6 rounded-lg">
-        <div className="mb-6">
-          <h2 className="text-xl font-medium mb-2">{question.text}</h2>
+      <div className="bg-muted/50 p-4 sm:p-6 rounded-lg border transition-smooth">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-medium mb-2">{question.text}</h2>
           {question.phase && (
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className={`px-2 py-1 text-xs rounded-full ${
-                question.phase === 1 ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                question.phase === 1 ? 'bg-info/10 text-info border border-info/20' : 'bg-primary/10 text-primary border border-primary/20'
               }`}>
                 Phase {question.phase} {question.phase === 1 ? 'Clinical Assessment' : 'Follow-up Questions'}
               </span>
               {question.redFlagIndicator && (
-                <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
+                <span className="px-2 py-1 text-xs rounded-full bg-destructive/10 text-destructive border border-destructive/20">
                   Red Flag Screening
                 </span>
               )}
             </div>
           )}
           {question.questionRationale && (
-            <p className="text-sm text-gray-600 italic">
+            <p className="text-xs sm:text-sm text-muted-foreground italic mt-2">
               Clinical Note: {question.questionRationale}
             </p>
           )}
@@ -106,14 +106,16 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
         {/* Multiple Choice */}
         {question.type === 'multiple-choice' && question.options && (
           <RadioGroup value={answer.toString()} onValueChange={setAnswer}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {question.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                    {option}
-                  </Label>
-                </div>
+                <label 
+                  key={index} 
+                  htmlFor={`option-${index}`}
+                  className="flex items-start space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-accent/50 transition-smooth has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                >
+                  <RadioGroupItem value={option} id={`option-${index}`} className="mt-0.5" />
+                  <span className="text-sm sm:text-base flex-1">{option}</span>
+                </label>
               ))}
             </div>
           </RadioGroup>
@@ -154,15 +156,21 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
         {/* Yes/No */}
         {question.type === 'yes-no' && (
           <RadioGroup value={answer.toString()} onValueChange={setAnswer}>
-            <div className="flex space-x-6">
-              <div className="flex items-center space-x-2">
+            <div className="grid grid-cols-2 gap-3">
+              <label 
+                htmlFor="yes"
+                className="flex items-center justify-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-accent/50 transition-smooth has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+              >
                 <RadioGroupItem value="yes" id="yes" />
-                <Label htmlFor="yes" className="cursor-pointer">Yes</Label>
-              </div>
-              <div className="flex items-center space-x-2">
+                <span className="font-medium">Yes</span>
+              </label>
+              <label 
+                htmlFor="no"
+                className="flex items-center justify-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-accent/50 transition-smooth has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+              >
                 <RadioGroupItem value="no" id="no" />
-                <Label htmlFor="no" className="cursor-pointer">No</Label>
-              </div>
+                <span className="font-medium">No</span>
+              </label>
             </div>
           </RadioGroup>
         )}
@@ -174,15 +182,16 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
             onChange={(e) => setAnswer(e.target.value)}
             placeholder="Please describe in detail..."
             rows={4}
+            className="resize-none min-h-[120px]"
           />
         )}
 
         {/* Scale */}
         {question.type === 'scale' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="space-y-4 p-4 bg-background rounded-lg border">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
               <span>1 (Mild)</span>
-              <span className="font-medium text-lg text-gray-900">{scaleValue[0]}</span>
+              <span className="font-bold text-2xl sm:text-3xl text-primary">{scaleValue[0]}</span>
               <span>10 (Severe)</span>
             </div>
             <Slider
@@ -191,33 +200,34 @@ export function QuestionComponent({ question, onSubmit, questionNumber, totalQue
               max={10}
               min={1}
               step={1}
-              className="w-full"
+              className="w-full touch-none"
             />
           </div>
         )}
 
         {/* Additional Notes */}
-        <div className="mt-6">
-          <Label htmlFor="notes" className="text-sm text-gray-600">Additional Notes (Optional)</Label>
+        <div className="mt-4 sm:mt-6">
+          <Label htmlFor="notes" className="text-xs sm:text-sm text-muted-foreground font-medium">Additional Notes (Optional)</Label>
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any additional details or clarifications..."
             rows={2}
-            className="mt-2"
+            className="mt-2 resize-none min-h-[80px]"
           />
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-500">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-2">
+        <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
           {question.required ? 'Required field' : 'Optional - click Next to skip'}
         </div>
         <Button 
           onClick={handleSubmit}
           disabled={!canSubmit()}
-          className="bg-teal-600 hover:bg-teal-700"
+          className="bg-primary hover:bg-primary/90 h-11 sm:h-10 w-full sm:w-auto hover-lift"
+          size="lg"
         >
           {questionNumber === totalQuestions ? 'Continue to Review of Systems' : 'Next Question'}
         </Button>
