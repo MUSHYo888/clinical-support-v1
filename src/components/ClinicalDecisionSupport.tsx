@@ -77,6 +77,7 @@ export function ClinicalDecisionSupport({
   const [treatmentRecommendation, setTreatmentRecommendation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showContinue, setShowContinue] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { state } = useMedical();
@@ -98,6 +99,16 @@ export function ClinicalDecisionSupport({
   useEffect(() => {
     loadClinicalData();
   }, [recommendations]);
+
+  // Show "continue anyway" after 15 seconds of loading
+  useEffect(() => {
+    if (loading || aiLoading) {
+      const timer = setTimeout(() => setShowContinue(true), 15000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContinue(false);
+    }
+  }, [loading, aiLoading]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -300,14 +311,33 @@ export function ClinicalDecisionSupport({
     return (
       <div className="p-6">
         <Card className="max-w-6xl mx-auto">
-          <CardContent className="flex items-center justify-center py-12">
-            <Brain className="h-8 w-8 animate-pulse text-primary mr-4" />
-            <div>
-              <p className="text-lg">Generating Clinical Decision Support...</p>
-              <p className="text-sm text-muted-foreground">
-                AI is analyzing patient data and generating intelligent recommendations
-              </p>
-            </div>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Brain className="h-8 w-8 animate-pulse text-primary mb-4" />
+            <p className="text-lg font-medium mb-2">Generating Clinical Decision Support...</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              AI is analyzing patient data and generating intelligent recommendations
+            </p>
+            <p className="text-xs text-muted-foreground">This usually takes 10-20 seconds</p>
+            
+            {showContinue && (
+              <div className="mt-6 text-center">
+                <Alert className="border-yellow-500 bg-yellow-50 mb-4">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    AI service is taking longer than expected
+                  </AlertDescription>
+                </Alert>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setLoading(false);
+                    toast.info('Using evidence-based clinical protocols');
+                  }}
+                >
+                  Continue with Clinical Protocols
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

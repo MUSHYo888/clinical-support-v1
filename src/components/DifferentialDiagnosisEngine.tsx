@@ -75,21 +75,29 @@ export function DifferentialDiagnosisEngine({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('diagnoses');
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
-    if (chiefComplaint && state.answers && Object.keys(state.answers).length > 0) {
+    if (chiefComplaint && state.answers && Object.keys(state.answers).length > 0 && !hasAttempted) {
       generateDifferentialDiagnosis();
     }
-  }, [chiefComplaint, state.answers, state.rosData, state.pmhData, state.peData]);
+  }, [chiefComplaint, hasAttempted]);
 
   const generateDifferentialDiagnosis = async () => {
     try {
       setLoading(true);
       setError(null);
+      setHasAttempted(true);
       
       console.log('Generating differential diagnosis with AI...');
 
-      const { data, error: functionError } = await supabase.functions.invoke('differential-diagnosis', {
+      // Create timeout promise (30 seconds)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI service timeout - taking longer than expected')), 30000)
+      );
+
+      // Create API call promise
+      const apiPromise = supabase.functions.invoke('differential-diagnosis', {
         body: {
           chiefComplaint,
           answers: state.answers,
@@ -99,6 +107,9 @@ export function DifferentialDiagnosisEngine({
           assessmentId
         }
       });
+
+      // Race between timeout and API call
+      const { data, error: functionError } = await Promise.race([apiPromise, timeoutPromise]) as any;
 
       if (functionError) {
         throw new Error(functionError.message);
@@ -120,11 +131,23 @@ export function DifferentialDiagnosisEngine({
 
     } catch (err) {
       console.error('Error generating differential diagnosis:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate differential diagnosis');
-      toast.error('Failed to generate differential diagnosis');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate differential diagnosis';
+      setError(errorMessage);
+      
+      if (errorMessage.includes('timeout')) {
+        toast.error('AI service is taking longer than expected. You can retry or continue with clinical protocols.');
+      } else {
+        toast.error('AI service unavailable. Using evidence-based clinical protocols.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualRetry = () => {
+    setHasAttempted(false);
+    setError(null);
+    generateDifferentialDiagnosis();
   };
 
   const getProbabilityColor = (probability: number) => {
@@ -159,7 +182,8 @@ export function DifferentialDiagnosisEngine({
           <div className="text-center">
             <Brain className="h-12 w-12 animate-pulse text-primary mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Generating Differential Diagnosis</h3>
-            <p className="text-muted-foreground">AI is analyzing clinical data and generating diagnostic possibilities...</p>
+            <p className="text-muted-foreground mb-4">AI is analyzing clinical data and generating diagnostic possibilities...</p>
+            <p className="text-sm text-muted-foreground">This usually takes 10-20 seconds</p>
           </div>
         </CardContent>
       </Card>
@@ -203,19 +227,29 @@ export function DifferentialDiagnosisEngine({
 
       <CardContent>
         {error && (
-          <Alert className="mb-6 border-destructive">
-            <AlertTriangle className="h-4 w-4" />
+          <Alert className="mb-6 border-yellow-500 bg-yellow-50">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <AlertDescription>
-              {error}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={generateDifferentialDiagnosis}
-                className="ml-2"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Retry
-              </Button>
+              <div className="font-medium text-yellow-900 mb-2">AI Service Unavailable</div>
+              <p className="text-sm text-yellow-800 mb-3">{error}</p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleManualRetry}
+                  className="border-yellow-600 text-yellow-700 hover:bg-yellow-100"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Retry with AI
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => setError(null)}
+                >
+                  Continue with Clinical Protocols
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         )}
