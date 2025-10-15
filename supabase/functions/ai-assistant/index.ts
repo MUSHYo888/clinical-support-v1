@@ -50,20 +50,20 @@ serve(async (req) => {
     console.log('Method:', req.method);
     console.log('URL:', req.url);
 
-    // Check Lovable API Key
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    // Check Google API Key
+    const googleApiKey = Deno.env.get('GOOGLE_API');
     console.log('Environment check:', {
-      hasLovableKey: !!lovableApiKey,
-      keyLength: lovableApiKey ? lovableApiKey.length : 0,
-      keyPreview: lovableApiKey ? lovableApiKey.substring(0, 12) + '...' : 'NOT_SET'
+      hasGoogleKey: !!googleApiKey,
+      keyLength: googleApiKey ? googleApiKey.length : 0,
+      keyPreview: googleApiKey ? googleApiKey.substring(0, 12) + '...' : 'NOT_SET'
     });
 
-    if (!lovableApiKey) {
+    if (!googleApiKey) {
       const errorResponse = { 
-        error: 'LOVABLE_API_KEY is not configured',
+        error: 'GOOGLE_API is not configured in Supabase secrets',
         timestamp: new Date().toISOString(),
         function: 'ai-assistant',
-        details: 'Lovable AI Gateway key is missing'
+        details: 'Please configure the GOOGLE_API in your Supabase project settings under Edge Functions > Secrets'
       };
       console.error('API Key Error:', errorResponse);
       return new Response(JSON.stringify(errorResponse), {
@@ -117,11 +117,11 @@ serve(async (req) => {
         service: 'ai-assistant',
         version: '2.0.0',
         environment: {
-          hasLovableKey: !!lovableApiKey,
-          lovableKeyLength: lovableApiKey ? lovableApiKey.length : 0,
+          hasGoogleKey: !!googleApiKey,
+          googleKeyLength: googleApiKey ? googleApiKey.length : 0,
           denoVersion: Deno.version.deno,
-          keyStatus: lovableApiKey ? 'CONFIGURED' : 'MISSING',
-          keyPrefix: lovableApiKey ? lovableApiKey.substring(0, 8) + '...' : 'N/A'
+          keyStatus: googleApiKey ? 'CONFIGURED' : 'MISSING',
+          keyPrefix: googleApiKey ? googleApiKey.substring(0, 8) + '...' : 'N/A'
         },
         endpoints: {
           'generate-questions': 'available',
@@ -147,8 +147,8 @@ serve(async (req) => {
         status: 'healthy', 
         timestamp: new Date().toISOString(),
         message: 'AI Assistant function is operational',
-        lovableConfigured: !!lovableApiKey,
-        version: '3.0.0',
+        googleConfigured: !!googleApiKey,
+        version: '2.0.0',
         testResult: 'PASS'
       };
       console.log('Test response:', testResponse);
@@ -204,62 +204,68 @@ ${Object.keys(previousAnswers).length > 0 ? `Previous answers: ${JSON.stringify(
 
 Generate focused clinical questions for this presentation.`;
 
-      console.log(`Sending request to Lovable AI Gateway...`);
+      console.log(`Sending request to Google Gemini API...`);
       console.log(`System prompt length: ${systemPrompt.length} characters`);
       console.log(`User prompt length: ${userPrompt.length} characters`);
 
       try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const modelToUse = 'gemini-2.0-flash-exp';
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${googleApiKey}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            max_tokens: 2000,
-            temperature: 0.3
+            contents: [{
+              parts: [{
+                text: `${systemPrompt}\n\n${userPrompt}`
+              }]
+            }],
+            generationConfig: {
+              maxOutputTokens: 2000,
+              temperature: 0.3
+            }
           }),
         });
 
-        console.log(`Lovable AI response status: ${response.status}`);
+        console.log(`Gemini response status: ${response.status}`);
+        console.log(`Gemini response headers:`, Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Lovable AI Error Details:', {
+          console.error('Gemini API Error Details:', {
             status: response.status,
             statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
             body: errorText
           });
           
-          if (response.status === 429) {
-            return new Response(JSON.stringify({ 
-              error: 'Rate limit exceeded. Please try again later.',
-              timestamp: new Date().toISOString()
-            }), {
-              status: 429,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          if (response.status === 402) {
-            return new Response(JSON.stringify({ 
-              error: 'AI credits exhausted. Please add credits to your Lovable workspace.',
-              timestamp: new Date().toISOString()
-            }), {
-              status: 402,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
+          logError('GEMINI_API', { status: response.status, statusText: response.statusText }, { 
+            errorText,
+            model: modelToUse,
+            hasApiKey: !!googleApiKey,
+            keyLength: googleApiKey?.length
+          });
           
           const errorResponse = {
-            error: `Lovable AI error: ${response.status} - ${response.statusText}`,
+            error: `Gemini API error: ${response.status} - ${response.statusText}`,
             details: errorText,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            apiKeyConfigured: !!googleApiKey,
+            modelUsed: modelToUse,
+            troubleshooting: {
+              possibleCauses: [
+                'API key invalid or expired',
+                'Gemini API quota exceeded',
+                'Model not available or rate limited',
+                'Request payload too large'
+              ],
+              nextSteps: [
+                'Verify API key in Google AI Studio',
+                'Check API quota and billing',
+                'Try again in a few minutes if rate limited'
+              ]
+            }
           };
           
           return new Response(JSON.stringify(errorResponse), {
@@ -269,13 +275,13 @@ Generate focused clinical questions for this presentation.`;
         }
 
         const data = await response.json();
-        console.log('Lovable AI response received');
+        console.log('Gemini response data:', JSON.stringify(data, null, 2));
         
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-          throw new Error('Invalid response structure from Lovable AI');
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+          throw new Error('Invalid response structure from Gemini API');
         }
 
-        const aiResponse = data.choices[0].message.content;
+        const aiResponse = data.candidates[0].content.parts[0].text;
         console.log('AI response content:', aiResponse);
         
         // Extract JSON from the response
@@ -317,7 +323,7 @@ Generate focused clinical questions for this presentation.`;
           details: fetchError.message,
           timestamp: new Date().toISOString(),
           chiefComplaint,
-          apiKeyConfigured: !!lovableApiKey,
+          apiKeyConfigured: !!googleApiKey,
           troubleshooting: {
             likelyCause: 'Network connectivity or Gemini API issue',
             nextSteps: [
@@ -365,22 +371,23 @@ ${JSON.stringify(rosData, null, 2)}
 
 Generate differential diagnoses with clinical reasoning.`;
 
-      console.log('Sending differential diagnosis request to Lovable AI...');
+      console.log('Sending differential diagnosis request to Gemini...');
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${googleApiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: 3000,
-          temperature: 0.2
+          contents: [{
+            parts: [{
+              text: `${systemPrompt}\n\n${userPrompt}`
+            }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 3000,
+            temperature: 0.2
+          }
         }),
       });
 
@@ -388,23 +395,12 @@ Generate differential diagnoses with clinical reasoning.`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Lovable AI error for differential:', response.status, errorText);
-        
-        if (response.status === 429 || response.status === 402) {
-          return new Response(JSON.stringify({ 
-            error: response.status === 429 ? 'Rate limit exceeded' : 'AI credits exhausted',
-            timestamp: new Date().toISOString()
-          }), {
-            status: response.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+        console.error('Gemini API error for differential:', response.status, errorText);
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = data.candidates[0].content.parts[0].text;
       
       // Extract JSON from the response
       const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
@@ -483,22 +479,21 @@ ${JSON.stringify(rosData, null, 2)}
 
 Generate comprehensive clinical decision support.`;
 
-      console.log('Sending clinical support request to Lovable AI...');
-
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${googleApiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: 4000,
-          temperature: 0.2
+          contents: [{
+            parts: [{
+              text: `${systemPrompt}\n\n${userPrompt}`
+            }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 4000,
+            temperature: 0.2
+          }
         }),
       });
 
@@ -506,23 +501,12 @@ Generate comprehensive clinical decision support.`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Lovable AI error for clinical support:', response.status, errorText);
-        
-        if (response.status === 429 || response.status === 402) {
-          return new Response(JSON.stringify({ 
-            error: response.status === 429 ? 'Rate limit exceeded' : 'AI credits exhausted',
-            timestamp: new Date().toISOString()
-          }), {
-            status: response.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+        console.error('Gemini API error for clinical support:', response.status, errorText);
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = data.candidates[0].content.parts[0].text;
       
       // Extract JSON from the response
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
