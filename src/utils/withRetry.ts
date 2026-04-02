@@ -1,0 +1,28 @@
+
+// ABOUTME: Retry utility with exponential backoff for AI service calls
+// ABOUTME: Circuit breaker pattern - retries N times then falls back gracefully
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  backoffMs: number = 1000
+): Promise<T> {
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`withRetry: Attempt ${attempt + 1}/${maxRetries} failed:`, error?.message || error);
+
+      if (attempt < maxRetries - 1) {
+        const waitTime = Math.pow(2, attempt) * backoffMs;
+        console.log(`withRetry: Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+
+  throw lastError;
+}
