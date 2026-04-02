@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Brain, AlertTriangle, Activity, FileText, Send, NotepadText, User, Stethoscope, ClipboardList } from 'lucide-react';
+import { Loader2, Brain, AlertTriangle, Activity, FileText, Send, NotepadText, User, Stethoscope, ClipboardList, Copy } from 'lucide-react';
 import { AIService } from '@/services/aiService';
 import { DifferentialDiagnosis } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
