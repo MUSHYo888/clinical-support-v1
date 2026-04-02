@@ -22,8 +22,27 @@ interface DashboardProps {
 
 export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalytics }: DashboardProps) {
   const [showSystemHealth, setShowSystemHealth] = useState(false);
+  const queryClient = useQueryClient();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
+
+  // Realtime subscriptions for live updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['patients'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assessments' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   const stats = [
     { 
