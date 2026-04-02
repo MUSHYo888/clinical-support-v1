@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Brain, AlertTriangle, Activity, FileText, Send, NotepadText, User, Stethoscope, ClipboardList } from 'lucide-react';
+import { Loader2, Brain, AlertTriangle, Activity, FileText, Send, NotepadText, User, Stethoscope, ClipboardList, Copy } from 'lucide-react';
 import { AIService } from '@/services/aiService';
 import { DifferentialDiagnosis } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
@@ -116,6 +116,34 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     toast.success('Referral letter saved successfully');
   };
 
+  const handleCopyToClipboard = async () => {
+    const sections = [
+      `PATIENT SUMMARY`,
+      `Chief Complaint: ${chiefComplaint}`,
+      state.currentPatient ? `Patient: ${state.currentPatient.name}, ${state.currentPatient.age}y, ${state.currentPatient.gender}` : '',
+      '',
+      `HISTORY OF PRESENTING ILLNESS`,
+      ...Object.entries(state.answers).map(([, a]) => `- ${a.value || ''} ${a.notes ? `(${a.notes})` : ''}`),
+      '',
+      `REVIEW OF SYSTEMS`,
+      ...Object.entries(state.rosData).map(([system, data]: [string, any]) => {
+        const pos = data.positive?.length ? `+: ${data.positive.join(', ')}` : '';
+        const neg = data.negative?.length ? `-: ${data.negative.join(', ')}` : '';
+        return `${system}: ${[pos, neg].filter(Boolean).join(' | ')}`;
+      }),
+      '',
+      `DIFFERENTIAL DIAGNOSES`,
+      ...differentials.map((d, i) => `${i + 1}. ${d.condition} (${d.probability}%) - ${d.explanation}`),
+    ].filter(line => line !== undefined).join('\n');
+
+    try {
+      await navigator.clipboard.writeText(sections);
+      toast.success('Clinical summary copied to clipboard');
+    } catch {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
   if (loading || clinicalDecisionLoading) {
     return (
       <div className="p-6">
@@ -222,6 +250,15 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
             >
               <Send className="h-4 w-4" />
               Generate Referral Letter
+            </Button>
+            
+            <Button
+              onClick={handleCopyToClipboard}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy to Clipboard
             </Button>
           </div>
 
