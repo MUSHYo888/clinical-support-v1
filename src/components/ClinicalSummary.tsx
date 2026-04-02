@@ -116,6 +116,34 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     toast.success('Referral letter saved successfully');
   };
 
+  const handleCopyToClipboard = async () => {
+    const sections = [
+      `PATIENT SUMMARY`,
+      `Chief Complaint: ${chiefComplaint}`,
+      state.currentPatient ? `Patient: ${state.currentPatient.name}, ${state.currentPatient.age}y, ${state.currentPatient.gender}` : '',
+      '',
+      `HISTORY OF PRESENTING ILLNESS`,
+      ...Object.entries(state.answers).map(([, a]) => `- ${a.value || ''} ${a.notes ? `(${a.notes})` : ''}`),
+      '',
+      `REVIEW OF SYSTEMS`,
+      ...Object.entries(state.rosData).map(([system, data]: [string, any]) => {
+        const pos = data.positive?.length ? `+: ${data.positive.join(', ')}` : '';
+        const neg = data.negative?.length ? `-: ${data.negative.join(', ')}` : '';
+        return `${system}: ${[pos, neg].filter(Boolean).join(' | ')}`;
+      }),
+      '',
+      `DIFFERENTIAL DIAGNOSES`,
+      ...differentials.map((d, i) => `${i + 1}. ${d.condition} (${d.probability}%) - ${d.explanation}`),
+    ].filter(line => line !== undefined).join('\n');
+
+    try {
+      await navigator.clipboard.writeText(sections);
+      toast.success('Clinical summary copied to clipboard');
+    } catch {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
   if (loading || clinicalDecisionLoading) {
     return (
       <div className="p-6">
