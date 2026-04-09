@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Lightbulb,
   Shield,
-  Activity
+  Activity,
+  Stethoscope
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMedical } from '@/context/MedicalContext';
