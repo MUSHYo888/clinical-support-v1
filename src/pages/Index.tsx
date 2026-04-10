@@ -303,8 +303,16 @@ const Index = () => {
               dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient });
               setCurrentView('patient-details');
             }}
-            }}
             onBack={() => setCurrentView('dashboard')}
+          />
+        )}
+
+        {currentView === 'patient-details' && state.currentPatient && (
+          <PatientDetails
+            patient={state.currentPatient}
+            onBack={() => setCurrentView('dashboard')}
+            onStartAssessment={() => setCurrentView('chief-complaint')}
+            onResumeAssessment={handleResumeAssessment}
           />
         )}
         
