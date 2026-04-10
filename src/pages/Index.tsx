@@ -12,6 +12,7 @@ import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { AssessmentWorkflow } from '@/components/AssessmentWorkflow';
 import { PatientList } from '@/components/PatientList';
 import { AssessmentResume } from '@/components/AssessmentResume';
+import { PatientDetails } from '@/components/PatientDetails';
 import { AssessmentErrorRecovery } from '@/components/AssessmentErrorRecovery';
 import { AIServiceTest } from '@/components/AIServiceTest';
 import { Patient, Assessment } from '@/types/medical';
@@ -21,7 +22,7 @@ import { useUpdatePatientAssessment } from '@/hooks/usePatients';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'summary' | 'resume-assessment' | 'error-recovery' | 'ai-testing' | 'analytics';
+type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'patient-details' | 'summary' | 'resume-assessment' | 'error-recovery' | 'ai-testing' | 'analytics';
 
 const SESSION_KEYS = {
   assessmentId: 'history-pro:active-assessment-id',
@@ -288,7 +289,7 @@ const Index = () => {
             onViewPatients={() => setCurrentView('patients')}
             onSelectPatient={(patient) => {
               dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient });
-              setCurrentView('chief-complaint');
+              setCurrentView('patient-details');
             }}
             onTestAI={() => setCurrentView('ai-testing')}
             onViewAnalytics={() => setCurrentView('analytics')}
@@ -300,7 +301,8 @@ const Index = () => {
             onNewPatient={handleNewPatient}
             onSelectPatient={(patient) => {
               dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient });
-              setCurrentView('chief-complaint');
+              setCurrentView('patient-details');
+            }}
             }}
             onBack={() => setCurrentView('dashboard')}
           />
