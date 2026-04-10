@@ -82,6 +82,7 @@ export function ClinicalDecisionSupport({
 
   const { state } = useMedical();
   const saveClinicalPlanMutation = useSaveClinicalDecisionSupport();
+  const emptyDiagnoses = useMemo(() => [] as any[], []);
   
   const {
     recommendations,
