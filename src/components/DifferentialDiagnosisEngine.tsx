@@ -324,7 +324,7 @@ export function DifferentialDiagnosisEngine({
                             Supporting Features
                           </h4>
                           <ul className="text-sm space-y-1">
-                            {diagnosis.keyFeatures.map((feature, i) => (
+                            {(diagnosis.keyFeatures || []).map((feature, i) => (
                               <li key={i} className="flex items-start">
                                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0" />
                                 {feature}
@@ -351,13 +351,13 @@ export function DifferentialDiagnosisEngine({
                         )}
                       </div>
 
-                      {diagnosis.redFlags.length > 0 && (
+                      {(diagnosis.redFlags || []).length > 0 && (
                         <Alert className="mt-4 border-red-200 bg-red-50">
                           <AlertTriangle className="h-4 w-4 text-red-500" />
                           <AlertDescription>
                             <div className="font-medium text-red-700 mb-1">Red Flags Identified:</div>
                             <ul className="text-sm text-red-600">
-                              {diagnosis.redFlags.map((flag, i) => (
+                              {(diagnosis.redFlags || []).map((flag, i) => (
                                 <li key={i}>• {flag}</li>
                               ))}
                             </ul>
