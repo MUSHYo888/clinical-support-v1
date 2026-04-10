@@ -3,6 +3,7 @@
 // ABOUTME: Includes realtime subscriptions for live patient and assessment updates
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, Clock, FileText, Activity, Settings, Wrench, BarChart3 } from 'lucide-react';
+import { Patient } from '@/types/medical';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,11 +17,12 @@ import { useQueryClient } from '@tanstack/react-query';
 interface DashboardProps {
   onNewPatient: () => void;
   onViewPatients: () => void;
+  onSelectPatient?: (patient: Patient) => void;
   onTestAI?: () => void;
   onViewAnalytics?: () => void;
 }
 
-export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalytics }: DashboardProps) {
+export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTestAI, onViewAnalytics }: DashboardProps) {
   const [showSystemHealth, setShowSystemHealth] = useState(false);
   const queryClient = useQueryClient();
   const { data: patients, isLoading: patientsLoading } = usePatients();
@@ -171,7 +173,11 @@ export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalyt
           ) : (
             <div className="space-y-3">
               {patients.slice(0, 5).map((patient) => (
-                <div key={patient.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:border-primary/50 transition-smooth space-y-2 sm:space-y-0 hover-lift">
+                <div 
+                  key={patient.id} 
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:border-primary/50 transition-smooth space-y-2 sm:space-y-0 hover-lift cursor-pointer"
+                  onClick={() => onSelectPatient?.(patient)}
+                >
                   <div>
                     <p className="font-medium text-sm sm:text-base">{patient.name}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">{patient.age} years • {patient.gender}</p>

@@ -286,6 +286,10 @@ const Index = () => {
           <Dashboard 
             onNewPatient={handleNewPatient}
             onViewPatients={() => setCurrentView('patients')}
+            onSelectPatient={(patient) => {
+              dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient });
+              setCurrentView('chief-complaint');
+            }}
             onTestAI={() => setCurrentView('ai-testing')}
             onViewAnalytics={() => setCurrentView('analytics')}
           />
