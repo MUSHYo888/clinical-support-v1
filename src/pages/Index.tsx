@@ -442,6 +442,7 @@ const Index = () => {
 
         {currentView === 'view-summary' && (
           <ClinicalSummary
+            readOnly
             chiefComplaint={selectedComplaint}
             onComplete={handleBackToDashboard}
             onBack={() => {
