@@ -148,6 +148,15 @@ export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTes
               View All
             </Button>
           </CardTitle>
+          <div className="relative max-w-sm mt-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search patients..."
+              value={dashboardSearch}
+              onChange={(e) => setDashboardSearch(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {patientsLoading ? (

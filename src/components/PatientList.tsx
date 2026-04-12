@@ -93,6 +93,18 @@ export function PatientList({ onNewPatient, onSelectPatient, onBack }: PatientLi
                 className="pl-10 h-11 sm:h-10"
               />
             </div>
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'active', 'none'] as const).map((filter) => (
+                <Badge
+                  key={filter}
+                  variant={statusFilter === filter ? 'default' : 'outline'}
+                  className="cursor-pointer text-xs px-3 py-1"
+                  onClick={() => setStatusFilter(filter)}
+                >
+                  {filter === 'all' ? 'All' : filter === 'active' ? 'Has Assessments' : 'No Assessments'}
+                </Badge>
+              ))}
+            </div>
             <Badge variant="outline" className="text-xs sm:text-sm px-3 py-2 w-fit">
               {filteredPatients.length} patients
             </Badge>
