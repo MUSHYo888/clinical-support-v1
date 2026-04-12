@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Activity, ArrowLeft, Calendar, FileText, User, UserPlus, ClipboardList, Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Activity, ArrowLeft, Calendar, FileText, User, UserPlus, ClipboardList, Loader2, Trash2 } from 'lucide-react';
 import { Patient } from '@/types/medical';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface PatientDetailsProps {
   patient: Patient;
@@ -19,9 +21,11 @@ interface PatientDetailsProps {
   onStartAssessment: () => void;
   onResumeAssessment: (assessmentId: string) => void;
   onViewCompletedAssessment?: (assessmentId: string, chiefComplaint: string) => void;
+  onDeletePatient?: () => void;
 }
 
-export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAssessment, onViewCompletedAssessment }: PatientDetailsProps) {
+export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAssessment, onViewCompletedAssessment, onDeletePatient }: PatientDetailsProps) {
+  const queryClient = useQueryClient();
   const { data: assessments, isLoading: assessmentsLoading } = useQuery({
     queryKey: ['patient-assessments', patient.id],
     queryFn: async () => {
