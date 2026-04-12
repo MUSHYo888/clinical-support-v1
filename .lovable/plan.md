@@ -1,41 +1,28 @@
 
 
-## Problem: CDS Loading State Never Resolves
+## Problem
+When viewing a completed assessment in the Patient Details view, there's no way to re-open and view the summary. The code only shows a "Resume" button for `in-progress` assessments (line 181-189 of `PatientDetails.tsx`). Completed assessments have no action button.
 
-### Root Cause
+## Plan
 
-In `ClinicalDecisionSupport.tsx` (line 92-97), the `useInvestigationRecommendations` hook is called with an inline `[]` literal for `differentialDiagnoses`:
+### 1. Add "View Summary" button for completed assessments in PatientDetails.tsx
+- Add a new prop `onViewCompletedAssessment: (assessmentId: string, chiefComplaint: string) => void`
+- Next to the existing "Resume" button block (line 181-189), add an equivalent block for `status === 'completed'` that renders a "View Summary" button calling this new prop
 
-```ts
-const { recommendations, redFlags, guidelines, loading: aiLoading, error: aiError } =
-  useInvestigationRecommendations(chiefComplaint, [], state.answers, state.rosData);
-```
+### 2. Add a read-only summary view route in Index.tsx
+- Add a new handler `handleViewCompletedAssessment` that:
+  - Loads the assessment and patient data from the database (similar to `handleResumeAssessment`)
+  - Sets the assessment and patient in state via dispatch
+  - Sets `selectedComplaint` from the assessment's `chief_complaint`
+  - Loads saved answers, ROS data, and differential diagnoses from the database into state
+  - Navigates to `currentView = 'view-summary'`
+- Add `'view-summary'` to the `AppState` type
+- Render `ClinicalSummary` in read-only mode for the `view-summary` view (reusing the existing component which already loads differentials and clinical decision data from the database)
 
-Inside the hook (`useInvestigationRecommendations.ts` line 85), the `useEffect` depends on `[chiefComplaint, differentialDiagnoses, answers, rosData]`. Since `[]` is a new array reference on every render, the effect re-triggers every render, which calls `fetchRecommendations`, which sets `loading = true`, which causes a re-render, creating an infinite loop.
+### 3. Pass the new callback from Index.tsx to PatientDetails
+- Wire `onViewCompletedAssessment` in the `patient-details` render block, calling `handleViewCompletedAssessment`
 
-Additionally, `loadClinicalData` in CDS runs whenever `recommendations` changes (line 99-101), and itself sets `loading = true` (line 134), compounding the problem. The guard at line 310 (`if (loading || aiLoading)`) keeps the loading screen permanently visible.
-
-### Fix Plan
-
-**File 1: `src/hooks/useInvestigationRecommendations.ts`**
-- Serialize the `useEffect` dependencies to prevent object/array identity from triggering re-runs. Replace the dependency array with stable values: `chiefComplaint` (string, stable), and `JSON.stringify` of `differentialDiagnoses`, `answers`, and `rosData`. This stops the infinite re-fetch loop.
-
-**File 2: `src/components/ClinicalDecisionSupport.tsx`**
-- Memoize the empty `differentialDiagnoses` array with `useMemo` so it has a stable identity (belt-and-suspenders fix).
-- In `loadClinicalData`, only set `loading = true` if `recommendations` is non-empty, preventing a loading flash on the initial empty-array state.
-
-### Technical Details
-
-In `useInvestigationRecommendations.ts`, change line 85 from:
-```ts
-}, [chiefComplaint, differentialDiagnoses, answers, rosData]);
-```
-to:
-```ts
-}, [chiefComplaint, JSON.stringify(differentialDiagnoses), JSON.stringify(answers), JSON.stringify(rosData)]);
-```
-
-In `ClinicalDecisionSupport.tsx`:
-- Add `const emptyDiagnoses = useMemo(() => [], []);` and pass it to the hook.
-- Guard `loadClinicalData` to skip the `setLoading(true)` call when `recommendations.length === 0`, since there is nothing to process yet.
+### Files changed
+- `src/components/PatientDetails.tsx` — add "View Summary" button + new prop
+- `src/pages/Index.tsx` — add handler, state type, and render block for viewing completed summaries
 
