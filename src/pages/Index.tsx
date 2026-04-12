@@ -12,6 +12,7 @@ import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { AssessmentWorkflow } from '@/components/AssessmentWorkflow';
 import { PatientList } from '@/components/PatientList';
 import { AssessmentResume } from '@/components/AssessmentResume';
+import { ClinicalSummary } from '@/components/ClinicalSummary';
 import { PatientDetails } from '@/components/PatientDetails';
 import { AssessmentErrorRecovery } from '@/components/AssessmentErrorRecovery';
 import { AIServiceTest } from '@/components/AIServiceTest';
@@ -22,7 +23,7 @@ import { useUpdatePatientAssessment } from '@/hooks/usePatients';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'patient-details' | 'summary' | 'resume-assessment' | 'error-recovery' | 'ai-testing' | 'analytics';
+type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'patient-details' | 'summary' | 'view-summary' | 'resume-assessment' | 'error-recovery' | 'ai-testing' | 'analytics';
 
 const SESSION_KEYS = {
   assessmentId: 'history-pro:active-assessment-id',
