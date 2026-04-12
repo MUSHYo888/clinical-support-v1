@@ -1,28 +1,41 @@
 
 
-## Problem
-When viewing a completed assessment in the Patient Details view, there's no way to re-open and view the summary. The code only shows a "Resume" button for `in-progress` assessments (line 181-189 of `PatientDetails.tsx`). Completed assessments have no action button.
+## Plan: Three Improvements
 
-## Plan
+### 1. Fix View Summary to load saved data instead of re-generating
 
-### 1. Add "View Summary" button for completed assessments in PatientDetails.tsx
-- Add a new prop `onViewCompletedAssessment: (assessmentId: string, chiefComplaint: string) => void`
-- Next to the existing "Resume" button block (line 181-189), add an equivalent block for `status === 'completed'` that renders a "View Summary" button calling this new prop
+**Problem**: When viewing a completed assessment summary, `ClinicalSummary` calls `AIService.generateDifferentialDiagnosis()` and `AIService.generateAdvancedClinicalSupport()` on mount (lines 45-48). This wastes AI credits and fails when credits are exhausted. The data is already saved in the `differential_diagnoses` and `clinical_decision_support` tables.
 
-### 2. Add a read-only summary view route in Index.tsx
-- Add a new handler `handleViewCompletedAssessment` that:
-  - Loads the assessment and patient data from the database (similar to `handleResumeAssessment`)
-  - Sets the assessment and patient in state via dispatch
-  - Sets `selectedComplaint` from the assessment's `chief_complaint`
-  - Loads saved answers, ROS data, and differential diagnoses from the database into state
-  - Navigates to `currentView = 'view-summary'`
-- Add `'view-summary'` to the `AppState` type
-- Render `ClinicalSummary` in read-only mode for the `view-summary` view (reusing the existing component which already loads differentials and clinical decision data from the database)
+**Fix**:
+- Add an optional `readOnly` prop to `ClinicalSummary`
+- When `readOnly` is true, skip AI generation and instead load differentials from `differential_diagnoses` table and clinical decision data from the existing `useGetClinicalDecisionSupport` hook (already wired)
+- Hide the "Complete Assessment" button in read-only mode
+- Pass `readOnly={true}` from `Index.tsx` when rendering the `view-summary` view
 
-### 3. Pass the new callback from Index.tsx to PatientDetails
-- Wire `onViewCompletedAssessment` in the `patient-details` render block, calling `handleViewCompletedAssessment`
+**Files**: `src/components/ClinicalSummary.tsx`, `src/pages/Index.tsx`
 
-### Files changed
-- `src/components/PatientDetails.tsx` — add "View Summary" button + new prop
-- `src/pages/Index.tsx` — add handler, state type, and render block for viewing completed summaries
+### 2. Add delete patient and delete assessment functionality
+
+**Changes**:
+- Add a "Delete Patient" button to `PatientDetails.tsx` with a confirmation dialog (uses existing `AlertDialog` UI component)
+- Add a "Delete" button per assessment row in the assessment history list
+- Create delete handlers that call `supabase.from('patients').delete()` and `supabase.from('assessments').delete()` respectively (RLS policies already allow delete for authenticated users)
+- On patient delete, navigate back to dashboard; on assessment delete, refresh the assessment list
+
+**Files**: `src/components/PatientDetails.tsx`, `src/pages/Index.tsx`
+
+### 3. Add search and filter to Patient List and Dashboard
+
+**Changes**:
+- `PatientList` already has a search bar (line 23-27) filtering by name and patient ID — enhance it with status filters (has in-progress assessment, has completed assessment, no assessments) and date range filter
+- Add a similar search input to the Dashboard's recent patients section for quick filtering
+
+**Files**: `src/components/PatientList.tsx`, `src/components/Dashboard.tsx`
+
+---
+
+### Implementation order
+1. View Summary fix (highest impact — currently broken when credits exhausted)
+2. Delete patient/assessment
+3. Search and filter enhancements
 
