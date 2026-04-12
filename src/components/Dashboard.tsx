@@ -183,7 +183,9 @@ export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTes
             </div>
           ) : (
             <div className="space-y-3">
-              {patients.slice(0, 5).map((patient) => (
+              {patients
+                .filter(p => !dashboardSearch || p.name.toLowerCase().includes(dashboardSearch.toLowerCase()) || p.patientId.toLowerCase().includes(dashboardSearch.toLowerCase()))
+                .slice(0, 5).map((patient) => (
                 <div 
                   key={patient.id} 
                   className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:border-primary/50 transition-smooth space-y-2 sm:space-y-0 hover-lift cursor-pointer"
