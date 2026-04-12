@@ -66,6 +66,33 @@ export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAss
     }
   };
 
+  const handleDeletePatient = async () => {
+    try {
+      const { error } = await supabase.from('patients').delete().eq('id', patient.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast.success('Patient deleted successfully');
+      onDeletePatient?.();
+    } catch (err) {
+      console.error('Failed to delete patient:', err);
+      toast.error('Failed to delete patient');
+    }
+  };
+
+  const handleDeleteAssessment = async (assessmentId: string) => {
+    try {
+      const { error } = await supabase.from('assessments').delete().eq('id', assessmentId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['patient-assessments', patient.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast.success('Assessment deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete assessment:', err);
+      toast.error('Failed to delete assessment');
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 animate-fade-in">
       <div className="max-w-4xl mx-auto space-y-6">
