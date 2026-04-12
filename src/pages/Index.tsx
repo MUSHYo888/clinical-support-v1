@@ -359,6 +359,7 @@ const Index = () => {
             onBack={() => setCurrentView('dashboard')}
             onStartAssessment={() => setCurrentView('chief-complaint')}
             onResumeAssessment={handleResumeAssessment}
+            onViewCompletedAssessment={handleViewCompletedAssessment}
           />
         )}
         
