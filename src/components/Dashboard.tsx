@@ -2,11 +2,9 @@
 // ABOUTME: Main clinical dashboard with stats, patient list, and system health
 // ABOUTME: Includes realtime subscriptions for live patient and assessment updates
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Clock, FileText, Activity, Settings, Wrench, BarChart3, Search } from 'lucide-react';
-import { Patient } from '@/types/medical';
+import { Plus, Users, Clock, FileText, Activity, Settings, Wrench, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePatients } from '@/hooks/usePatients';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
@@ -18,14 +16,12 @@ import { useQueryClient } from '@tanstack/react-query';
 interface DashboardProps {
   onNewPatient: () => void;
   onViewPatients: () => void;
-  onSelectPatient?: (patient: Patient) => void;
   onTestAI?: () => void;
   onViewAnalytics?: () => void;
 }
 
-export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTestAI, onViewAnalytics }: DashboardProps) {
+export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalytics }: DashboardProps) {
   const [showSystemHealth, setShowSystemHealth] = useState(false);
-  const [dashboardSearch, setDashboardSearch] = useState('');
   const queryClient = useQueryClient();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
@@ -150,15 +146,6 @@ export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTes
               View All
             </Button>
           </CardTitle>
-          <div className="relative max-w-sm mt-2">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search patients..."
-              value={dashboardSearch}
-              onChange={(e) => setDashboardSearch(e.target.value)}
-              className="pl-10 h-9"
-            />
-          </div>
         </CardHeader>
         <CardContent>
           {patientsLoading ? (
@@ -183,14 +170,8 @@ export function Dashboard({ onNewPatient, onViewPatients, onSelectPatient, onTes
             </div>
           ) : (
             <div className="space-y-3">
-              {patients
-                .filter(p => !dashboardSearch || p.name.toLowerCase().includes(dashboardSearch.toLowerCase()) || p.patientId.toLowerCase().includes(dashboardSearch.toLowerCase()))
-                .slice(0, 5).map((patient) => (
-                <div 
-                  key={patient.id} 
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:border-primary/50 transition-smooth space-y-2 sm:space-y-0 hover-lift cursor-pointer"
-                  onClick={() => onSelectPatient?.(patient)}
-                >
+              {patients.slice(0, 5).map((patient) => (
+                <div key={patient.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:border-primary/50 transition-smooth space-y-2 sm:space-y-0 hover-lift">
                   <div>
                     <p className="font-medium text-sm sm:text-base">{patient.name}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">{patient.age} years • {patient.gender}</p>

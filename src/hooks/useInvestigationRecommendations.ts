@@ -79,7 +79,7 @@ export function useInvestigationRecommendations(
     if (chiefComplaint) {
       fetchRecommendations();
     }
-  }, [chiefComplaint, JSON.stringify(differentialDiagnoses), JSON.stringify(answers), JSON.stringify(rosData)]);
+  }, [chiefComplaint, differentialDiagnoses, answers, rosData]);
 
   return {
     recommendations,
