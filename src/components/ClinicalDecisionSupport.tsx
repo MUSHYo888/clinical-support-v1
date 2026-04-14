@@ -1,7 +1,7 @@
 // ABOUTME: Unified clinical decision support component integrating investigations and treatment planning
 // ABOUTME: Provides seamless workflow between diagnostic testing and therapeutic decisions
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -66,6 +66,7 @@ export function ClinicalDecisionSupport({
   onBack,
   onNavigateToStep
 }: ClinicalDecisionSupportProps) {
+  // === ALL REACT HOOKS MUST GO HERE AT THE TOP ===
   const [activeTab, setActiveTab] = useState('investigations');
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
   const [selectedMedications, setSelectedMedications] = useState<string[]>([]);
@@ -83,6 +84,9 @@ export function ClinicalDecisionSupport({
   const { state } = useMedical();
   const saveClinicalPlanMutation = useSaveClinicalDecisionSupport();
   
+  // INFINITE LOOP FIX 1: Create a stable empty array reference so the AI hook doesn't refresh constantly
+  const emptyDiagnoses = useMemo(() => [], []);
+
   const {
     recommendations,
     redFlags,
@@ -91,14 +95,22 @@ export function ClinicalDecisionSupport({
     error: aiError
   } = useInvestigationRecommendations(
     chiefComplaint, 
-    [], // Will be populated with differential diagnoses
+    emptyDiagnoses, 
     state.answers, 
     state.rosData
   );
 
+  // INFINITE LOOP FIX 2: Convert the recommendations array to a string to safely check if it changed
+  const recommendationsJson = JSON.stringify(recommendations || []);
+
   useEffect(() => {
-    loadClinicalData();
-  }, [recommendations]);
+    // Only load clinical data if we actually have recommendations to process
+    if (recommendations && recommendations.length > 0) {
+      loadClinicalData();
+    } else if (!aiLoading) {
+      setLoading(false);
+    }
+  }, [recommendationsJson, aiLoading]); // Trigger based on the stringified data
 
   // Show "continue anyway" after 15 seconds of loading
   useEffect(() => {
@@ -120,7 +132,7 @@ export function ClinicalDecisionSupport({
       if (selectedInvestigations.length > 0 || selectedMedications.length > 0 || clinicalNotes.trim()) {
         handleAutoSave();
       }
-    }, 3000); // Auto-save after 3 seconds of inactivity
+    }, 3000);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
@@ -129,30 +141,30 @@ export function ClinicalDecisionSupport({
     };
   }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan]);
 
+  // === HELPER FUNCTIONS ===
+
   const loadClinicalData = async () => {
     try {
       setLoading(true);
 
-      // Generate investigation intelligence
       const intelligenceData = await Promise.all(
         recommendations.map(async (rec) => {
           const intelligence = InvestigationIntelligenceService.generateInvestigationIntelligence(
             rec.investigation.id,
             chiefComplaint,
             { answers: state.answers, rosData: state.rosData },
-            []
+            emptyDiagnoses
           );
           return { ...rec, intelligence };
         })
       );
       setInvestigationIntelligence(intelligenceData);
 
-      // Generate treatment recommendations
       const treatment = TreatmentManagementService.generateTreatmentRecommendation(
         chiefComplaint,
-        'moderate', // Default severity, could be determined by AI
+        'moderate',
         state.currentPatient,
-        []
+        emptyDiagnoses
       );
       setTreatmentRecommendation(treatment);
 
@@ -291,7 +303,6 @@ export function ClinicalDecisionSupport({
   const { investigationsSelected, treatmentSelected, hasRationale, hasFollowUp } = getCompletionStatus();
   const canProceed = investigationsSelected && treatmentSelected && hasRationale && hasFollowUp;
 
-  // Breadcrumb steps
   const breadcrumbSteps = [
     { id: 'history', label: 'History', completed: true, current: false, clickable: true },
     { id: 'ros', label: 'Review of Systems', completed: true, current: false, clickable: true },
@@ -306,6 +317,8 @@ export function ClinicalDecisionSupport({
       onNavigateToStep(stepId);
     }
   };
+
+  // === EARLY RETURNS (MUST BE AFTER ALL HOOKS) ===
 
   if (loading || aiLoading) {
     return (
@@ -344,6 +357,8 @@ export function ClinicalDecisionSupport({
     );
   }
 
+  // === MAIN RENDER ===
+
   return (
     <div className="p-6">
       <Card className="max-w-6xl mx-auto">
@@ -358,7 +373,6 @@ export function ClinicalDecisionSupport({
             Chief Complaint: <span className="font-medium">{chiefComplaint}</span>
           </p>
           
-          {/* Enhanced Progress Indicators */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
               <div className={`w-3 h-3 rounded-full ${investigationsSelected ? 'bg-success' : 'bg-muted-foreground/40'}`} />
@@ -382,7 +396,6 @@ export function ClinicalDecisionSupport({
             </div>
           </div>
           
-          {/* Auto-save indicator */}
           {saveClinicalPlanMutation.isPending && (
             <Alert className="mt-4">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -392,7 +405,6 @@ export function ClinicalDecisionSupport({
         </CardHeader>
 
         <CardContent>
-          {/* Validation Errors */}
           {validationErrors.length > 0 && (
             <Alert className="mb-6 border-destructive">
               <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -410,7 +422,6 @@ export function ClinicalDecisionSupport({
             </Alert>
           )}
 
-          {/* AI Error Alert */}
           {aiError && (
             <Alert className="mb-6 border-warning bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
@@ -422,7 +433,6 @@ export function ClinicalDecisionSupport({
             </Alert>
           )}
 
-          {/* Red Flags Alert */}
           {redFlags.length > 0 && (
             <Alert className="mb-6 border-destructive bg-destructive/10">
               <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -462,7 +472,6 @@ export function ClinicalDecisionSupport({
               </TabsTrigger>
             </TabsList>
 
-            {/* AI Differential Diagnosis Tab */}
             <TabsContent value="diagnosis" className="space-y-6">
               <DifferentialDiagnosisEngine
                 chiefComplaint={chiefComplaint}
@@ -473,7 +482,6 @@ export function ClinicalDecisionSupport({
               />
             </TabsContent>
 
-            {/* Clinical Scoring Systems Tab */}
             <TabsContent value="scoring" className="space-y-6">
               <ClinicalScoringSystem
                 chiefComplaint={chiefComplaint}
@@ -481,7 +489,6 @@ export function ClinicalDecisionSupport({
               />
             </TabsContent>
 
-            {/* Investigations Tab */}
             <TabsContent value="investigations" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold flex items-center">
@@ -515,7 +522,6 @@ export function ClinicalDecisionSupport({
                             </Badge>
                           </div>
 
-                          {/* Enhanced Cost-Benefit Display */}
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 p-4 bg-muted/50 rounded-lg border">
                             <div className="space-y-1">
                               <div className="flex items-center space-x-2">
@@ -557,7 +563,6 @@ export function ClinicalDecisionSupport({
                             </div>
                           </div>
 
-                          {/* Enhanced Contraindications & Safety */}
                           {item.intelligence.contraindications.riskAssessment !== 'low' && (
                             <Alert className="mb-3 border-warning bg-warning/10">
                               <Shield className="h-4 w-4 text-warning" />
@@ -572,7 +577,7 @@ export function ClinicalDecisionSupport({
                                 {item.intelligence.contraindications.contraindications.length > 0 && (
                                   <div className="mb-2">
                                     <p className="text-sm font-medium mb-1">Contraindications:</p>
-                                    {item.intelligence.contraindications.contraindications.map((contraindication, idx) => (
+                                    {item.intelligence.contraindications.contraindications.map((contraindication: any, idx: number) => (
                                       <p key={idx} className="text-sm flex items-center space-x-2">
                                         <Badge variant={contraindication.type === 'absolute' ? 'destructive' : 'secondary'} className="text-xs">
                                           {contraindication.type}
@@ -586,7 +591,7 @@ export function ClinicalDecisionSupport({
                                 {item.intelligence.contraindications.warnings.length > 0 && (
                                   <div className="mb-2">
                                     <p className="text-sm font-medium mb-1">Warnings:</p>
-                                    {item.intelligence.contraindications.warnings.map((warning, idx) => (
+                                    {item.intelligence.contraindications.warnings.map((warning: any, idx: number) => (
                                       <p key={idx} className="text-sm">• {warning.description}</p>
                                     ))}
                                   </div>
@@ -596,7 +601,7 @@ export function ClinicalDecisionSupport({
                                   <div>
                                     <p className="text-sm font-medium mb-1">Alternative Investigations:</p>
                                     <div className="flex flex-wrap gap-1">
-                                      {item.intelligence.contraindications.alternativeRecommendations.map((alt, idx) => (
+                                      {item.intelligence.contraindications.alternativeRecommendations.map((alt: any, idx: number) => (
                                         <Badge key={idx} variant="secondary" className="text-xs">
                                           {alt}
                                         </Badge>
@@ -634,7 +639,6 @@ export function ClinicalDecisionSupport({
               </div>
             </TabsContent>
 
-            {/* Treatment Tab */}
             <TabsContent value="treatment" className="space-y-6">
               {treatmentRecommendation && (
                 <>
@@ -645,7 +649,7 @@ export function ClinicalDecisionSupport({
                     </h3>
                     
                     <div className="space-y-4">
-                      {treatmentRecommendation.medicationSuggestions.map((medSuggestion, index) => (
+                      {treatmentRecommendation.medicationSuggestions.map((medSuggestion: any, index: number) => (
                         <Card key={index} className="border-l-4 border-l-secondary">
                           <CardContent className="p-4">
                             <div className="flex items-start space-x-4">
@@ -682,7 +686,7 @@ export function ClinicalDecisionSupport({
                     <h3 className="text-xl font-semibold mb-4">Non-Pharmacological Treatment</h3>
                     
                     <div className="space-y-2">
-                      {treatmentRecommendation.nonPharmacological.map((treatment, index) => (
+                      {treatmentRecommendation.nonPharmacological.map((treatment: string, index: number) => (
                         <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
                           <Checkbox
                             checked={selectedNonPharm.includes(treatment)}
@@ -715,7 +719,6 @@ export function ClinicalDecisionSupport({
             </TabsContent>
           </Tabs>
 
-          {/* Clinical Notes */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-3">Additional Clinical Notes</h3>
             <Textarea
@@ -726,7 +729,6 @@ export function ClinicalDecisionSupport({
             />
           </div>
 
-          {/* Summary Card */}
           <Card className="mt-6 bg-primary/5 border-primary">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
@@ -748,7 +750,6 @@ export function ClinicalDecisionSupport({
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
           <div className="flex justify-between pt-6 border-t">
             <Button variant="outline" onClick={onBack}>
               Back to Physical Examination
