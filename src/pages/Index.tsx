@@ -18,6 +18,7 @@ import { Patient, Assessment } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
 import { useCreateAssessment, useUpdateAssessmentStep, useAssessment } from '@/hooks/useAssessment';
 import { useUpdatePatientAssessment } from '@/hooks/usePatients';
+import { AssessmentService } from '@/services/assessmentService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -90,6 +91,17 @@ const Index = () => {
             updatedAt: assessment.updated_at,
           },
         });
+
+        const [answers, rosData, pmhData, peData] = await Promise.all([
+          AssessmentService.getAssessmentAnswers(savedAssessmentId),
+          AssessmentService.getReviewOfSystems(savedAssessmentId),
+          AssessmentService.getPastMedicalHistory(savedAssessmentId),
+          AssessmentService.getPhysicalExamination(savedAssessmentId)
+        ]);
+        dispatch({ type: 'SET_ALL_ANSWERS', payload: answers });
+        dispatch({ type: 'SET_ROS_DATA', payload: rosData });
+        if (pmhData) dispatch({ type: 'SET_PMH_DATA', payload: pmhData });
+        if (peData) dispatch({ type: 'SET_PE_DATA', payload: peData });
 
         setSelectedComplaint(assessment.chief_complaint);
         setCurrentView('assessment');
@@ -230,6 +242,17 @@ const Index = () => {
           updatedAt: assessment.updated_at
         }
       });
+
+      const [answers, rosData, pmhData, peData] = await Promise.all([
+        AssessmentService.getAssessmentAnswers(assessmentId),
+        AssessmentService.getReviewOfSystems(assessmentId),
+        AssessmentService.getPastMedicalHistory(assessmentId),
+        AssessmentService.getPhysicalExamination(assessmentId)
+      ]);
+      dispatch({ type: 'SET_ALL_ANSWERS', payload: answers });
+      dispatch({ type: 'SET_ROS_DATA', payload: rosData });
+      if (pmhData) dispatch({ type: 'SET_PMH_DATA', payload: pmhData });
+      if (peData) dispatch({ type: 'SET_PE_DATA', payload: peData });
 
       // Persist active session
       localStorage.setItem(SESSION_KEYS.assessmentId, assessment.id);

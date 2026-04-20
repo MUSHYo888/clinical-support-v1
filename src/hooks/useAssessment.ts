@@ -134,8 +134,7 @@ export function useSavePMH() {
 
   return useMutation({
     mutationFn: async ({ assessmentId, pmhData }: { assessmentId: string; pmhData: any }) => {
-      // TODO: Replace with AssessmentService call once the DB table is ready
-      return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 400));
+      return AssessmentService.savePastMedicalHistory(assessmentId, pmhData);
     },
     onSuccess: (_, { assessmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
@@ -152,8 +151,7 @@ export function useSavePE() {
 
   return useMutation({
     mutationFn: async ({ assessmentId, peData }: { assessmentId: string; peData: any }) => {
-      // TODO: Replace with AssessmentService call once the DB table is ready
-      return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 400));
+      return AssessmentService.savePhysicalExamination(assessmentId, peData);
     },
     onSuccess: (_, { assessmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });

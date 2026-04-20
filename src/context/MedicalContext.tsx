@@ -31,6 +31,7 @@ type MedicalAction =
   | { type: 'SET_CURRENT_ASSESSMENT'; payload: Assessment }
   | { type: 'SET_STEP'; payload: number }
   | { type: 'ADD_ANSWER'; payload: { questionId: string; answer: Answer } }
+  | { type: 'SET_ALL_ANSWERS'; payload: Record<string, Answer> }
   | { type: 'SET_ROS_DATA'; payload: ReviewOfSystems }
   | { type: 'UPDATE_ROS'; payload: { system: string; data: any } }
   | { type: 'SET_PMH_DATA'; payload: PastMedicalHistoryData }
@@ -67,6 +68,9 @@ function medicalReducer(state: MedicalState, action: MedicalAction): MedicalStat
           [action.payload.questionId]: action.payload.answer
         }
       };
+
+    case 'SET_ALL_ANSWERS':
+      return { ...state, answers: action.payload };
     
     case 'SET_ROS_DATA':
       return { 

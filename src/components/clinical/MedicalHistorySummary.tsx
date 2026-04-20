@@ -9,6 +9,10 @@ interface MedicalHistorySummaryProps {
   pmhData?: {
     conditions: string[];
     medications: string[];
+    surgeries?: string[];
+    allergies?: string[];
+    familyHistory?: string;
+    socialHistory?: string;
   };
   peData?: {
     vitalSigns: {
@@ -35,22 +39,62 @@ export function MedicalHistorySummary({ pmhData, peData }: MedicalHistorySummary
             <CardTitle className="text-lg">Past Medical History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h5 className="font-medium mb-2">Medical Conditions</h5>
-                <ul className="text-sm space-y-1">
-                  {pmhData.conditions.map((condition, idx) => (
-                    <li key={idx}>• {condition}</li>
-                  ))}
-                </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Medical Conditions</h5>
+                  {pmhData.conditions?.length > 0 ? (
+                    <ul className="text-sm space-y-1">
+                      {pmhData.conditions.map((condition, idx) => (
+                        <li key={idx}>• {condition}</li>
+                      ))}
+                    </ul>
+                  ) : <span className="text-sm text-muted-foreground italic">None reported</span>}
+                </div>
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Previous Surgeries</h5>
+                  {pmhData.surgeries?.length > 0 ? (
+                    <ul className="text-sm space-y-1">
+                      {pmhData.surgeries.map((surgery, idx) => (
+                        <li key={idx}>• {surgery}</li>
+                      ))}
+                    </ul>
+                  ) : <span className="text-sm text-muted-foreground italic">None reported</span>}
+                </div>
               </div>
-              <div>
-                <h5 className="font-medium mb-2">Current Medications</h5>
-                <ul className="text-sm space-y-1">
-                  {pmhData.medications.map((medication, idx) => (
-                    <li key={idx}>• {medication}</li>
-                  ))}
-                </ul>
+              
+              <div className="space-y-4">
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Current Medications</h5>
+                  {pmhData.medications?.length > 0 ? (
+                    <ul className="text-sm space-y-1">
+                      {pmhData.medications.map((medication, idx) => (
+                        <li key={idx}>• {medication}</li>
+                      ))}
+                    </ul>
+                  ) : <span className="text-sm text-muted-foreground italic">None reported</span>}
+                </div>
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Allergies</h5>
+                  {pmhData.allergies?.length > 0 ? (
+                    <ul className="text-sm space-y-1 text-destructive font-medium">
+                      {pmhData.allergies.map((allergy, idx) => (
+                        <li key={idx}>• {allergy}</li>
+                      ))}
+                    </ul>
+                  ) : <span className="text-sm text-muted-foreground italic">No known allergies</span>}
+                </div>
+              </div>
+
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Family History</h5>
+                  <p className="text-sm whitespace-pre-wrap">{pmhData.familyHistory || <span className="text-muted-foreground italic">Not reported</span>}</p>
+                </div>
+                <div>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-1">Social History</h5>
+                  <p className="text-sm whitespace-pre-wrap">{pmhData.socialHistory || <span className="text-muted-foreground italic">Not reported</span>}</p>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -148,7 +148,7 @@ export class AssessmentService {
 
   static async savePastMedicalHistory(assessmentId: string, pmhData: any): Promise<void> {
     const { error } = await supabase
-      .from('past_medical_history' as any)
+      .from('past_medical_history')
       .upsert({
         assessment_id: assessmentId,
         conditions: pmhData.conditions || [],
@@ -158,7 +158,7 @@ export class AssessmentService {
         family_history: pmhData.familyHistory || '',
         social_history: pmhData.socialHistory || '',
         social_history_structured: pmhData.socialHistoryStructured || null
-      });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PMH data:', error);
@@ -168,13 +168,13 @@ export class AssessmentService {
 
   static async savePhysicalExamination(assessmentId: string, peData: any): Promise<void> {
     const { error } = await supabase
-      .from('physical_examinations' as any)
+      .from('physical_examination')
       .upsert({
         assessment_id: assessmentId,
         vital_signs: peData.vitalSigns || {},
         systems: peData.systems || {},
         general_appearance: peData.generalAppearance || ''
-      });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PE data:', error);
@@ -237,6 +237,65 @@ export class AssessmentService {
     });
 
     return answers;
+  }
+
+  static async getReviewOfSystems(assessmentId: string): Promise<ReviewOfSystems> {
+    const { data, error } = await supabase
+      .from('review_of_systems')
+      .select('*')
+      .eq('assessment_id', assessmentId);
+
+    if (error) {
+      console.error('Error fetching ROS:', error);
+      return {};
+    }
+
+    const rosData: ReviewOfSystems = {};
+    data.forEach(ros => {
+      rosData[ros.system_name] = {
+        positive: (ros.positive_symptoms as string[]) || [],
+        negative: (ros.negative_symptoms as string[]) || [],
+        notes: ros.notes || undefined
+      };
+    });
+
+    return rosData;
+  }
+
+  static async getPastMedicalHistory(assessmentId: string): Promise<any | null> {
+    const { data, error } = await supabase
+      .from('past_medical_history')
+      .select('*')
+      .eq('assessment_id', assessmentId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      conditions: data.conditions || [],
+      surgeries: data.surgeries || [],
+      medications: data.medications || [],
+      allergies: data.allergies || [],
+      familyHistory: data.family_history || '',
+      socialHistory: data.social_history || '',
+      socialHistoryStructured: data.social_history_structured || null
+    };
+  }
+
+  static async getPhysicalExamination(assessmentId: string): Promise<any | null> {
+    const { data, error } = await supabase
+      .from('physical_examination')
+      .select('*')
+      .eq('assessment_id', assessmentId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      vitalSigns: data.vital_signs || {},
+      systems: data.systems || {},
+      generalAppearance: data.general_appearance || ''
+    };
   }
 
   static async getAssessment(assessmentId: string): Promise<Assessment | null> {
