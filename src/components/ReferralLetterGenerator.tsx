@@ -244,7 +244,7 @@ export function ReferralLetterGenerator({
         status: 'draft'
       };
 
-      const pdfBlob = await PDFGeneratorService.generateReferralLetterPDF(referralData, patient);
+      const pdfBlob = await PDFGeneratorService.generateReferralLetterPDF(referralData, patient, { physicianName });
       
       // Create download link
       const url = URL.createObjectURL(pdfBlob);

@@ -64,10 +64,28 @@ export class PDFGeneratorService {
       yPosition = this.addReviewOfSystems(pdf, report.content.reviewOfSystems, config.margins.left, yPosition, contentWidth);
     }
 
+    // Past Medical History
+    if (report.content.pastMedicalHistory) {
+      yPosition = this.addPastMedicalHistory(pdf, report.content.pastMedicalHistory, config.margins.left, yPosition, contentWidth);
+    }
+
+    // Physical Examination
+    if (report.content.physicalExamination) {
+      yPosition = this.addPhysicalExamination(pdf, report.content.physicalExamination, config.margins.left, yPosition, contentWidth);
+    }
+
     // Differential Diagnoses
     if (differentials.length > 0) {
       yPosition = this.addDifferentialDiagnoses(pdf, differentials, config.margins.left, yPosition, contentWidth);
     }
+
+    // Clinical Plan & Investigations
+    if (report.content.clinicalDecisionData) {
+      yPosition = this.addClinicalPlan(pdf, report.content.clinicalDecisionData, config.margins.left, yPosition, contentWidth);
+    }
+
+    // Physician Signature
+    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, contentWidth, config.physicianName);
 
     // Footer
     if (config.includeFooter) {
@@ -150,7 +168,7 @@ export class PDFGeneratorService {
     yPosition += 10;
     pdf.text('Yours sincerely,', config.margins.left, yPosition);
     yPosition += 15;
-    pdf.text('Dr. [Your Name]', config.margins.left, yPosition);
+    pdf.text(config.physicianName || 'Dr. [Your Name]', config.margins.left, yPosition);
 
     if (config.includeFooter) {
       this.addFooter(pdf, config);
@@ -198,6 +216,9 @@ export class PDFGeneratorService {
       yPosition = this.addSection(pdf, 'Additional Notes', soapNote.additionalNotes, config.margins.left, yPosition, contentWidth);
     }
 
+    // Physician Signature
+    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, contentWidth, config.physicianName);
+
     if (config.includeFooter) {
       this.addFooter(pdf, config);
     }
@@ -227,7 +248,17 @@ export class PDFGeneratorService {
     return y + 35;
   }
 
+  private static checkPageBreak(pdf: jsPDF, currentY: number, requiredSpace: number = 20): number {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    if (currentY + requiredSpace > pageHeight - 20) {
+      pdf.addPage();
+      return 20; // Default top margin
+    }
+    return currentY;
+  }
+
   private static addPatientDemographics(pdf: jsPDF, patient: Patient, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 40);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Patient Information:', x, y);
@@ -249,6 +280,7 @@ export class PDFGeneratorService {
   }
 
   private static addSection(pdf: jsPDF, title: string, content: string, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${title}:`, x, y);
@@ -256,11 +288,16 @@ export class PDFGeneratorService {
     
     pdf.setFont('helvetica', 'normal');
     const lines = pdf.splitTextToSize(content, width);
-    pdf.text(lines, x, y);
-    return y + (lines.length * 6) + 5;
+    for (let i = 0; i < lines.length; i++) {
+      y = this.checkPageBreak(pdf, y, 8);
+      pdf.text(lines[i], x, y);
+      y += 6;
+    }
+    return y + 5;
   }
 
   private static addReviewOfSystems(pdf: jsPDF, rosData: Record<string, any>, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Review of Systems:', x, y);
@@ -269,6 +306,7 @@ export class PDFGeneratorService {
     pdf.setFont('helvetica', 'normal');
     Object.entries(rosData).forEach(([system, data]) => {
       if (data.positive && data.positive.length > 0) {
+        y = this.checkPageBreak(pdf, y, 8);
         pdf.text(`${system}: ${data.positive.join(', ')}`, x, y);
         y += 6;
       }
@@ -276,7 +314,100 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
+  private static addPastMedicalHistory(pdf: jsPDF, pmhData: any, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Past Medical History:', x, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    
+    const printRow = (label: string, content: string, isRed: boolean = false) => {
+      if (!content) return;
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      if (isRed) pdf.setTextColor(220, 38, 38);
+      pdf.text(label, x, y);
+      if (isRed) pdf.setTextColor(0, 0, 0);
+      
+      pdf.setFont('helvetica', 'normal');
+      const lines = pdf.splitTextToSize(content, width - 30);
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) y = this.checkPageBreak(pdf, y, 8);
+        pdf.text(lines[i], x + 30, y);
+        y += 6;
+      }
+    };
+
+    if (pmhData.conditions?.length) printRow('Conditions:', pmhData.conditions.join(', '));
+    if (pmhData.surgeries?.length) printRow('Surgeries:', pmhData.surgeries.join(', '));
+    if (pmhData.medications?.length) printRow('Medications:', pmhData.medications.join(', '));
+    if (pmhData.allergies?.length) printRow('Allergies:', pmhData.allergies.join(', '), true);
+    if (pmhData.familyHistory) printRow('Family Hx:', pmhData.familyHistory);
+    if (pmhData.socialHistory) printRow('Social Hx:', pmhData.socialHistory);
+
+    return y + 5;
+  }
+
+  private static addPhysicalExamination(pdf: jsPDF, peData: any, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Physical Examination:', x, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    
+    if (peData.vitalSigns) {
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Vitals:', x, y);
+      pdf.setFont('helvetica', 'normal');
+      const vs = peData.vitalSigns;
+      const vitalsStr = `BP: ${vs.bloodPressure || '-'}, HR: ${vs.heartRate || '-'}, RR: ${vs.respiratoryRate || '-'}, Temp: ${vs.temperature || '-'}, SpO2: ${vs.oxygenSaturation || '-'}`;
+      pdf.text(vitalsStr, x + 20, y);
+      y += 6;
+    }
+
+    if (peData.generalAppearance) {
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('General:', x, y);
+      pdf.setFont('helvetica', 'normal');
+      const genLines = pdf.splitTextToSize(peData.generalAppearance, width - 20);
+      for (let i = 0; i < genLines.length; i++) {
+        if (i > 0) y = this.checkPageBreak(pdf, y, 8);
+        pdf.text(genLines[i], x + 20, y);
+        y += 6;
+      }
+    }
+
+    if (peData.systems) {
+      Object.entries(peData.systems).forEach(([sys, data]: [string, any]) => {
+        y = this.checkPageBreak(pdf, y, 10);
+        pdf.setFont('helvetica', 'bold');
+        const sysName = sys.charAt(0).toUpperCase() + sys.slice(1) + ':';
+        pdf.text(sysName, x, y);
+        
+        pdf.setFont('helvetica', 'normal');
+        let findings = data.normal ? 'Normal' : (data.findings?.join(', ') || '');
+        if (data.notes) findings += ` - ${data.notes}`;
+        
+        const lines = pdf.splitTextToSize(findings, width - 30);
+        for (let i = 0; i < lines.length; i++) {
+          if (i > 0) y = this.checkPageBreak(pdf, y, 8);
+          pdf.text(lines[i], x + 30, y);
+          y += 6;
+        }
+      });
+    }
+
+    return y + 5;
+  }
+
   private static addDifferentialDiagnoses(pdf: jsPDF, differentials: DifferentialDiagnosis[], x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Differential Diagnoses:', x, y);
@@ -284,16 +415,118 @@ export class PDFGeneratorService {
     
     pdf.setFont('helvetica', 'normal');
     differentials.forEach((diff, index) => {
+      y = this.checkPageBreak(pdf, y, 10);
       pdf.text(`${index + 1}. ${diff.condition} (${diff.probability}%)`, x, y);
       y += 6;
       if (diff.explanation) {
         const lines = pdf.splitTextToSize(`   ${diff.explanation}`, width - 10);
-        pdf.text(lines, x + 5, y);
-        y += lines.length * 6;
+        for (let i = 0; i < lines.length; i++) {
+          y = this.checkPageBreak(pdf, y, 8);
+          pdf.text(lines[i], x + 5, y);
+          y += 6;
+        }
       }
       y += 3;
     });
     return y + 5;
+  }
+
+  private static addClinicalPlan(pdf: jsPDF, cdsData: any, x: number, y: number, width: number): number {
+    y = this.checkPageBreak(pdf, y, 15);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Clinical Plan & Investigations:', x, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    
+    const printSection = (label: string, items: string[]) => {
+      if (!items || items.length === 0) return;
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(label, x, y);
+      y += 6;
+      
+      pdf.setFont('helvetica', 'normal');
+      items.forEach(item => {
+        const lines = pdf.splitTextToSize(`• ${item}`, width - 10);
+        for (let i = 0; i < lines.length; i++) {
+          y = this.checkPageBreak(pdf, y, 8);
+          pdf.text(lines[i], x + 5, y);
+          y += 6;
+        }
+      });
+      y += 2;
+    };
+
+    if (cdsData.investigation_plan?.selected?.length) printSection('Investigations Ordered:', cdsData.investigation_plan.selected);
+    
+    if (cdsData.investigation_plan?.results?.length) {
+      const results = cdsData.investigation_plan.results.map((r: any) => `${r.name}: ${r.value}`);
+      printSection('Lab/Investigation Results:', results);
+    }
+
+    if (cdsData.treatment_plan?.medications?.length) printSection('Prescribed Medications:', cdsData.treatment_plan.medications);
+    if (cdsData.treatment_plan?.nonPharmacological?.length) printSection('Non-Pharmacological Treatment:', cdsData.treatment_plan.nonPharmacological);
+
+    if (cdsData.treatment_plan?.followUp) {
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Follow-up Plan:', x, y);
+      y += 6;
+      pdf.setFont('helvetica', 'normal');
+      const lines = pdf.splitTextToSize(cdsData.treatment_plan.followUp, width - 10);
+      for (let i = 0; i < lines.length; i++) {
+        y = this.checkPageBreak(pdf, y, 8);
+        pdf.text(lines[i], x + 5, y);
+        y += 6;
+      }
+      y += 4;
+    }
+
+    if (cdsData.clinical_notes) {
+      y = this.checkPageBreak(pdf, y, 10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Clinical Notes:', x, y);
+      y += 6;
+      pdf.setFont('helvetica', 'normal');
+      const lines = pdf.splitTextToSize(cdsData.clinical_notes, width - 10);
+      for (let i = 0; i < lines.length; i++) {
+        y = this.checkPageBreak(pdf, y, 8);
+        pdf.text(lines[i], x + 5, y);
+        y += 6;
+      }
+      y += 4;
+    }
+
+    return y + 5;
+  }
+
+  private static addSignatureBlock(pdf: jsPDF, x: number, y: number, width: number, physicianName?: string): number {
+    y = this.checkPageBreak(pdf, y, 30);
+    y += 20; // Add some spacing before the signature line
+    
+    // Draw Signature Line
+    pdf.setDrawColor(0);
+    pdf.setLineWidth(0.5);
+    pdf.line(x, y, x + 70, y);
+    
+    // Draw Date Line
+    pdf.line(x + 100, y, x + 150, y);
+    
+    y += 5;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Physician Signature', x, y);
+    pdf.text('Date', x + 100, y);
+    
+    if (physicianName) {
+      y += 5;
+      pdf.setFont('helvetica', 'italic');
+      pdf.text(physicianName, x, y);
+    }
+
+    return y + 10;
   }
 
   private static addFooter(pdf: jsPDF, config: PDFExportOptions): void {

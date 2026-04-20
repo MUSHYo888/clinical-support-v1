@@ -224,6 +224,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
       '',
       `CLINICAL PLAN`,
       clinicalDecisionData?.investigation_plan?.selected?.length ? `Investigations: ${clinicalDecisionData.investigation_plan.selected.join(', ')}` : undefined,
+      clinicalDecisionData?.investigation_plan?.results?.length ? `Lab Results: ${clinicalDecisionData.investigation_plan.results.map((r: any) => `${r.name}: ${r.value}`).join(', ')}` : undefined,
       clinicalDecisionData?.treatment_plan?.medications?.length ? `Treatment Medications: ${clinicalDecisionData.treatment_plan.medications.join(', ')}` : undefined,
       clinicalDecisionData?.treatment_plan?.nonPharmacological?.length ? `Non-Pharm: ${clinicalDecisionData.treatment_plan.nonPharmacological.join(', ')}` : undefined,
       clinicalDecisionData?.treatment_plan?.followUp ? `Follow-up: ${clinicalDecisionData.treatment_plan.followUp}` : undefined,
@@ -236,6 +237,62 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     } catch {
       toast.error('Failed to copy to clipboard');
     }
+  };
+
+  const generateSOAPInitialData = () => {
+    const subjective = [
+      `Chief Complaint: ${chiefComplaint}`,
+      '',
+      `HISTORY OF PRESENTING ILLNESS:`,
+      ...Object.entries(state.answers).map(([, a]) => `- ${a.value || ''} ${a.notes ? `(${a.notes})` : ''}`),
+      '',
+      `REVIEW OF SYSTEMS:`,
+      ...Object.entries(state.rosData).map(([system, data]: [string, any]) => {
+        const pos = data.positive?.length ? `+: ${data.positive.join(', ')}` : '';
+        const neg = data.negative?.length ? `-: ${data.negative.join(', ')}` : '';
+        return (pos || neg) ? `${system}: ${[pos, neg].filter(Boolean).join(' | ')}` : null;
+      }).filter(Boolean),
+      '',
+      `PAST MEDICAL HISTORY:`,
+      state.pmhData?.conditions?.length ? `Conditions: ${state.pmhData.conditions.join(', ')}` : undefined,
+      state.pmhData?.surgeries?.length ? `Surgeries: ${state.pmhData.surgeries.join(', ')}` : undefined,
+      state.pmhData?.medications?.length ? `Medications: ${state.pmhData.medications.join(', ')}` : undefined,
+      state.pmhData?.allergies?.length ? `Allergies: ${state.pmhData.allergies.join(', ')}` : undefined,
+      state.pmhData?.familyHistory ? `Family History: ${state.pmhData.familyHistory}` : undefined,
+      state.pmhData?.socialHistory ? `Social History: ${state.pmhData.socialHistory}` : undefined,
+    ].filter(line => line !== undefined).join('\n');
+
+    const objective = [
+      `PHYSICAL EXAMINATION:`,
+      state.peData?.vitalSigns ? `Vitals: BP ${state.peData.vitalSigns.bloodPressure || '-'}, HR ${state.peData.vitalSigns.heartRate || '-'}, RR ${state.peData.vitalSigns.respiratoryRate || '-'}, Temp ${state.peData.vitalSigns.temperature || '-'}, SpO2 ${state.peData.vitalSigns.oxygenSaturation || '-'}` : undefined,
+      state.peData?.generalAppearance ? `General: ${state.peData.generalAppearance}` : undefined,
+      ...(state.peData?.systems ? Object.entries(state.peData.systems).map(([sys, data]: [string, any]) => {
+        const findings = data.normal ? 'Normal' : data.findings?.join(', ');
+        return findings || data.notes ? `${sys}: ${findings}${data.notes ? ` - ${data.notes}` : ''}` : null;
+      }).filter(Boolean) : []),
+    ].filter(line => line !== undefined).join('\n');
+
+    const assessment = [
+      `DIFFERENTIAL DIAGNOSES:`,
+      ...differentials.map((d, i) => `${i + 1}. ${d.condition} (${d.probability}%) - ${d.explanation}`),
+    ].join('\n');
+
+    const plan = [
+      `CLINICAL PLAN:`,
+      clinicalDecisionData?.investigation_plan?.selected?.length ? `Investigations: ${clinicalDecisionData.investigation_plan.selected.join(', ')}` : undefined,
+      clinicalDecisionData?.investigation_plan?.results?.length ? `Lab Results: ${clinicalDecisionData.investigation_plan.results.map((r: any) => `${r.name}: ${r.value}`).join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.medications?.length ? `Treatment Medications: ${clinicalDecisionData.treatment_plan.medications.join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.nonPharmacological?.length ? `Non-Pharm: ${clinicalDecisionData.treatment_plan.nonPharmacological.join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.followUp ? `Follow-up: ${clinicalDecisionData.treatment_plan.followUp}` : undefined,
+    ].filter(line => line !== undefined).join('\n');
+
+    return {
+      subjective: subjective.trim(),
+      objective: objective.trim(),
+      assessment: assessment.trim(),
+      plan: plan.trim(),
+      additionalNotes: clinicalDecisionData?.clinical_notes || ''
+    };
   };
 
   if (loading || clinicalDecisionLoading) {
@@ -258,6 +315,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     return (
       <SOAPNotesEditor
         assessmentId={state.currentAssessment?.id || ''}
+        initialData={generateSOAPInitialData()}
         onSave={handleSOAPNoteSaved}
         onCancel={() => setShowSOAPEditor(false)}
       />

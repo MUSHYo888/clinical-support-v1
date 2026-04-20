@@ -9,6 +9,7 @@ import { PDFGeneratorService } from '@/services/reporting/PDFGeneratorService';
 import { ClinicalReportService } from '@/services/reporting/ClinicalReportService';
 import { Patient, DifferentialDiagnosis } from '@/types/medical';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PDFExportButtonProps {
   assessmentId: string;
@@ -36,6 +37,12 @@ export function PDFExportButton({
   size = 'default'
 }: PDFExportButtonProps) {
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  // Format email into a proper name (e.g. "jane.doe@medical.com" -> "Dr. Jane Doe")
+  const physicianName = user?.email 
+    ? `Dr. ${user.email.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+    : undefined;
 
   const handleExportPDF = async () => {
     try {
@@ -79,7 +86,8 @@ export function PDFExportButton({
       const pdfBlob = await PDFGeneratorService.generateClinicalReportPDF(
         clinicalReport,
         patient,
-        differentials
+        differentials,
+        { physicianName }
       );
 
       // Download PDF

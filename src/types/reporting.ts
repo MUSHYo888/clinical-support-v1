@@ -129,4 +129,5 @@ export interface PDFExportOptions {
     bottom: number;
     left: number;
   };
+  physicianName?: string;
 }
