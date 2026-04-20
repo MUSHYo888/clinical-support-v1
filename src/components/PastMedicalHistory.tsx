@@ -17,6 +17,13 @@ interface PastMedicalHistoryProps {
   onBack: () => void;
 }
 
+interface FamilyHistoryData {
+  mother: string;
+  father: string;
+  siblings: string;
+  otherRelatives: string;
+}
+
 interface SocialHistoryData {
   smokingStatus: string;
   packYears: string;
@@ -69,6 +76,13 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
     allergy: ''
   });
 
+  const [familyData, setFamilyData] = useState<FamilyHistoryData>({
+    mother: '',
+    father: '',
+    siblings: '',
+    otherRelatives: ''
+  });
+
   const addItem = (category: keyof Pick<PastMedicalHistoryData, 'conditions' | 'surgeries' | 'medications' | 'allergies'>, item: string) => {
     if (item.trim() && !data[category].includes(item.trim())) {
       setData(prev => ({
@@ -94,6 +108,13 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
   };
 
   const handleSubmit = () => {
+    const familySummary = [
+      familyData.mother && `Mother: ${familyData.mother}`,
+      familyData.father && `Father: ${familyData.father}`,
+      familyData.siblings && `Siblings: ${familyData.siblings}`,
+      familyData.otherRelatives && `Other: ${familyData.otherRelatives}`
+    ].filter(Boolean).join('. ');
+
     // Compile social history into a readable string for backward compatibility
     const socialSummary = [
       socialData.smokingStatus && `Smoking: ${socialData.smokingStatus}${socialData.packYears ? ` (${socialData.packYears} pack-years)` : ''}`,
@@ -105,6 +126,7 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
 
     onSubmit({
       ...data,
+      familyHistory: familySummary ? `${familySummary}. ${data.familyHistory}`.trim() : data.familyHistory,
       socialHistory: socialSummary || data.socialHistory,
       socialHistoryStructured: socialData,
     });
@@ -235,16 +257,52 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
               </div>
             </div>
 
-            {/* Family History */}
-            <div className="space-y-2">
-              <Label htmlFor="familyHistory" className="text-lg font-medium">Family History</Label>
-              <Textarea
-                id="familyHistory"
-                placeholder="Document relevant family medical history (first-degree relatives)..."
-                value={data.familyHistory}
-                onChange={(e) => setData(prev => ({ ...prev, familyHistory: e.target.value }))}
-                rows={3}
-              />
+            {/* Structured Family History */}
+            <div className="space-y-4">
+              <Label className="text-lg font-medium">Family History</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Mother</Label>
+                  <Input
+                    placeholder="Conditions (e.g., Hypertension)..."
+                    value={familyData.mother}
+                    onChange={(e) => setFamilyData(prev => ({ ...prev, mother: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Father</Label>
+                  <Input
+                    placeholder="Conditions (e.g., Type 2 Diabetes)..."
+                    value={familyData.father}
+                    onChange={(e) => setFamilyData(prev => ({ ...prev, father: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Siblings</Label>
+                  <Input
+                    placeholder="Conditions..."
+                    value={familyData.siblings}
+                    onChange={(e) => setFamilyData(prev => ({ ...prev, siblings: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Other Relatives</Label>
+                  <Input
+                    placeholder="Grandparents, children..."
+                    value={familyData.otherRelatives}
+                    onChange={(e) => setFamilyData(prev => ({ ...prev, otherRelatives: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Additional Family Notes</Label>
+                <Textarea
+                  placeholder="Document any other relevant family medical history..."
+                  value={data.familyHistory}
+                  onChange={(e) => setData(prev => ({ ...prev, familyHistory: e.target.value }))}
+                  rows={2}
+                />
+              </div>
             </div>
 
             {/* Structured Social History */}

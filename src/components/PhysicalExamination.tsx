@@ -1,7 +1,7 @@
 
 // ABOUTME: Component for systematic physical examination documentation
 // ABOUTME: Collects examination findings organized by body systems
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { PhysicalExamData } from '@/types/physical-exam';
 
 interface PhysicalExaminationProps {
+  chiefComplaint?: string;
   onComplete: (data: PhysicalExamData) => void;
   onBack: () => void;
 }
@@ -94,7 +95,7 @@ const examSystems = [
   }
 ];
 
-export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationProps) {
+export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: PhysicalExaminationProps) {
   const [data, setData] = useState<PhysicalExamData>({
     vitalSigns: {
       bloodPressure: '',
@@ -175,12 +176,34 @@ export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationP
     onComplete(data);
   };
 
+  // Dynamically prioritize and reorder exam systems based on the Chief Complaint
+  const prioritizedSystems = useMemo(() => {
+    if (!chiefComplaint) return examSystems.map(s => ({ ...s, isPriority: false }));
+    
+    const complaint = chiefComplaint.toLowerCase();
+    const priorityMap: Record<string, string[]> = {
+      'cardiovascular': ['chest', 'heart', 'palpitation', 'breath', 'edema', 'faint', 'dizzi'],
+      'pulmonary': ['breath', 'cough', 'wheez', 'sputum', 'asthma', 'copd', 'chok'],
+      'abdomen': ['abdom', 'stomach', 'nausea', 'vomit', 'diarrhea', 'constipat', 'bowel', 'gi', 'pain'],
+      'neurological': ['headache', 'dizzi', 'weak', 'numb', 'seizure', 'tingl', 'vision', 'speech', 'confus'],
+      'musculoskeletal': ['joint', 'back', 'muscle', 'bone', 'pain', 'injur', 'fall', 'trauma', 'swell'],
+      'skin': ['rash', 'itch', 'burn', 'cut', 'lesion', 'skin', 'color', 'wound']
+    };
+
+    const systemsWithPriority = examSystems.map(sys => {
+      const keywords = priorityMap[sys.name] || [];
+      return { ...sys, isPriority: keywords.some(kw => complaint.includes(kw)) };
+    });
+
+    return systemsWithPriority.sort((a, b) => (a.isPriority === b.isPriority ? 0 : a.isPriority ? -1 : 1));
+  }, [chiefComplaint]);
+
   const isSystemComplete = (systemName: string) => {
     const system = data.systems[systemName];
     return system && (system.normal || system.findings.length > 0);
   };
 
-  const completedSystems = examSystems.filter(s => isSystemComplete(s.name)).length;
+  const completedSystems = prioritizedSystems.filter(s => isSystemComplete(s.name)).length;
 
   return (
     <div className="p-6">
@@ -192,7 +215,7 @@ export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationP
           </p>
           <div className="text-center">
             <Badge variant="outline">
-              {completedSystems}/{examSystems.length} systems examined
+              {completedSystems}/{prioritizedSystems.length} systems examined
             </Badge>
           </div>
         </CardHeader>
@@ -274,10 +297,17 @@ export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationP
 
               <TabsContent value="systems" className="space-y-6">
                 <h3 className="text-lg font-medium">System Examination</h3>
-                {examSystems.map((system) => (
-                  <Card key={system.name} className="p-4">
+                {prioritizedSystems.map((system) => (
+                  <Card key={system.name} className={`p-4 ${system.isPriority ? 'border-l-4 border-l-primary shadow-sm' : ''}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">{system.label}</h4>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-medium">{system.label}</h4>
+                        {system.isPriority && (
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                            CC Priority
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id={`${system.name}-normal`}
@@ -342,7 +372,7 @@ export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationP
                   <div>
                     <h4 className="font-medium mb-2">System Examinations</h4>
                     <div className="space-y-2">
-                      {examSystems.map((system) => {
+                      {prioritizedSystems.map((system) => {
                         const systemData = data.systems[system.name];
                         if (!systemData) return null;
 

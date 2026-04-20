@@ -40,6 +40,7 @@ export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalyt
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assessments' }, () => {
         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['patients'] });
       })
       .subscribe();
 

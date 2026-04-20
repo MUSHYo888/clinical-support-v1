@@ -10,6 +10,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  fallbackRender?: (error: Error, resetErrorBoundary: () => void) => ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
@@ -64,6 +65,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallbackRender && this.state.error) {
+        return this.props.fallbackRender(this.state.error, this.handleRetry);
+      }
+
       if (this.props.fallback) {
         return this.props.fallback;
       }

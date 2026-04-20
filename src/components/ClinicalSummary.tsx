@@ -28,17 +28,20 @@ interface ClinicalSummaryProps {
   onBack: () => void;
 }
 
-// Helper to retry critical AI calls with exponential backoff
-const withRetry = async <T,>(fn: () => Promise<T>, retries = 3, delay = 1000, signal?: AbortSignal): Promise<T> => {
+// Circuit Breaker helper to retry critical AI calls with exponential backoff and fallback
+const withCircuitBreaker = async <T,>(fn: () => Promise<T>, fallback: T, retries = 3, delay = 1000, signal?: AbortSignal): Promise<T> => {
   try {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     return await fn();
   } catch (error: any) {
     if (error.name === 'AbortError' || signal?.aborted) throw error;
-    if (retries === 0) throw error;
+    if (retries === 0) {
+      console.warn('Circuit breaker triggered. Using fallback data.');
+      return fallback;
+    }
     console.warn(`AI Call failed, retrying in ${delay}ms... (${retries} retries left)`);
     await new Promise(resolve => setTimeout(resolve, delay));
-    return withRetry(fn, retries - 1, delay * 2, signal);
+    return withCircuitBreaker(fn, fallback, retries - 1, delay * 2, signal);
   }
 };
 
@@ -86,19 +89,50 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
     setError(null);
 
     try {
+      const fallbackDifferentials: DifferentialDiagnosis[] = [
+        {
+          condition: 'Clinical Assessment Needed',
+          probability: 0,
+          explanation: 'AI service unavailable. Proceed with standard clinical evaluation protocols.',
+          keyFeatures: [],
+          urgency: 'moderate',
+          category: 'General',
+          redFlags: []
+        }
+      ];
+
+      const fallbackSupport = {
+        clinicalAlerts: [],
+        triageRecommendation: {
+          priority: 'routine',
+          timeframe: 'Standard evaluation',
+          location: 'clinic',
+          reasoning: 'Standard protocol evaluation required',
+          immediateActions: []
+        },
+        severityScores: [],
+        riskAssessment: {
+          overallRisk: 'moderate',
+          riskScore: 0,
+          maxRiskScore: 10,
+          riskFactors: [],
+          recommendations: ['Follow standard clinical protocols']
+        }
+      };
+
       const [diffs, support] = await Promise.all([
-        withRetry(() => AIService.generateDifferentialDiagnosis(
+        withCircuitBreaker(() => AIService.generateDifferentialDiagnosis(
           chiefComplaint,
           state.answers,
           state.rosData
-        ), 3, 1000, signal),
-        withRetry(() => AIService.generateAdvancedClinicalSupport(
+        ), fallbackDifferentials, 3, 1000, signal),
+        withCircuitBreaker(() => AIService.generateAdvancedClinicalSupport(
           chiefComplaint,
           state.answers,
           state.rosData,
           state.peData?.vitalSigns,
           { age: state.currentPatient?.age ?? 45 }
-        ), 3, 1000, signal)
+        ), fallbackSupport, 3, 1000, signal)
       ]);
 
       if (signal.aborted) return;
@@ -117,6 +151,9 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
   };
 
   const handleCompleteAssessment = async () => {
+    if (isCompleted) {
+      return onComplete();
+    }
     if (state.currentAssessment) {
       try {
         await completeAssessmentMutation.mutateAsync(state.currentAssessment.id);
@@ -169,8 +206,28 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
         return `${system}: ${[pos, neg].filter(Boolean).join(' | ')}`;
       }),
       '',
+      `PAST MEDICAL HISTORY`,
+      state.pmhData?.conditions?.length ? `Conditions: ${state.pmhData.conditions.join(', ')}` : undefined,
+      state.pmhData?.surgeries?.length ? `Surgeries: ${state.pmhData.surgeries.join(', ')}` : undefined,
+      state.pmhData?.medications?.length ? `Medications: ${state.pmhData.medications.join(', ')}` : undefined,
+      state.pmhData?.allergies?.length ? `Allergies: ${state.pmhData.allergies.join(', ')}` : undefined,
+      state.pmhData?.familyHistory ? `Family History: ${state.pmhData.familyHistory}` : undefined,
+      state.pmhData?.socialHistory ? `Social History: ${state.pmhData.socialHistory}` : undefined,
+      '',
+      `PHYSICAL EXAMINATION`,
+      state.peData?.vitalSigns ? `Vitals: BP ${state.peData.vitalSigns.bloodPressure || '-'}, HR ${state.peData.vitalSigns.heartRate || '-'}, RR ${state.peData.vitalSigns.respiratoryRate || '-'}, Temp ${state.peData.vitalSigns.temperature || '-'}, SpO2 ${state.peData.vitalSigns.oxygenSaturation || '-'}` : undefined,
+      state.peData?.generalAppearance ? `General: ${state.peData.generalAppearance}` : undefined,
+      ...(state.peData?.systems ? Object.entries(state.peData.systems).map(([sys, data]: [string, any]) => `${sys}: ${data.normal ? 'Normal' : data.findings?.join(', ')}${data.notes ? ` - ${data.notes}` : ''}`) : []),
+      '',
       `DIFFERENTIAL DIAGNOSES`,
       ...differentials.map((d, i) => `${i + 1}. ${d.condition} (${d.probability}%) - ${d.explanation}`),
+      '',
+      `CLINICAL PLAN`,
+      clinicalDecisionData?.investigation_plan?.selected?.length ? `Investigations: ${clinicalDecisionData.investigation_plan.selected.join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.medications?.length ? `Treatment Medications: ${clinicalDecisionData.treatment_plan.medications.join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.nonPharmacological?.length ? `Non-Pharm: ${clinicalDecisionData.treatment_plan.nonPharmacological.join(', ')}` : undefined,
+      clinicalDecisionData?.treatment_plan?.followUp ? `Follow-up: ${clinicalDecisionData.treatment_plan.followUp}` : undefined,
+      clinicalDecisionData?.clinical_notes ? `Clinical Notes: ${clinicalDecisionData.clinical_notes}` : undefined,
     ].filter(line => line !== undefined).join('\n');
 
     try {
@@ -352,6 +409,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
                 <Brain className="h-5 w-5 text-secondary" />
                 <h3 className="text-xl font-semibold">Differential Diagnosis</h3>
               </div>
+              {!isCompleted && (
               <Button
               onClick={() => {
                 if (loading) return;
@@ -369,6 +427,7 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
                 )}
                 Regenerate AI Analysis
               </Button>
+              )}
             </div>
             
             <DifferentialDiagnosisList differentials={differentials} />
@@ -392,10 +451,11 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
 
           {/* Final Actions */}
           <div className="flex justify-between items-center pt-6">
-            <Button variant="outline" onClick={onBack}>
+            {!isCompleted && (<Button variant="outline" onClick={onBack}>
               Back to Clinical Decision Support
-            </Button>
+            </Button>)}
             
+            {!isCompleted ? (
             <Button 
               onClick={handleCompleteAssessment}
               disabled={completeAssessmentMutation.isPending}
@@ -413,6 +473,11 @@ export function ClinicalSummary({ chiefComplaint, onComplete, onBack }: Clinical
                 </>
               )}
             </Button>
+            ) : (
+            <Button onClick={onComplete} className="ml-auto">
+              Return to Dashboard
+            </Button>
+            )}
           </div>
         </CardContent>
       </Card>

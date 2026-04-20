@@ -19,6 +19,7 @@ import { useStepManager } from './StepManager';
 import { useSaveQuestions, useSaveAnswer, useSavePMH, useSavePE } from '@/hooks/useAssessment';
 import { toast } from 'sonner';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AssessmentErrorRecovery } from './AssessmentErrorRecovery';
 
 interface AssessmentWorkflowProps {
   chiefComplaint: string;
@@ -26,7 +27,7 @@ interface AssessmentWorkflowProps {
   onBack: () => void;
 }
 
-export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: AssessmentWorkflowProps) {
+function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: AssessmentWorkflowProps) {
   const { state, dispatch } = useMedical();
   
   // Phase 1 questions state
@@ -61,6 +62,8 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
   const savePMHMutation = useSavePMH();
   const savePEMutation = useSavePE();
   const { updateStep } = useStepManager();
+  
+  const isCompleted = state.currentAssessment?.status === 'completed';
 
   const steps = [
     'History of Present Illness',
@@ -72,10 +75,17 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
   ];
 
   useEffect(() => {
-    loadPhase1Questions();
+    if (isCompleted) {
+      setShowSummary(true);
+      setLoading(false);
+    } else {
+      loadPhase1Questions();
+    }
   }, [chiefComplaint]);
 
   const loadPhase1Questions = async () => {
+    if (isCompleted) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -84,7 +94,7 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
       const questions = EnhancedQuestionGeneratorService.generatePhase1Questions(chiefComplaint);
       
       // Save Phase 1 questions to database BEFORE setting local state
-      if (state.currentAssessment && questions.length > 0) {
+      if (state.currentAssessment && questions.length > 0 && !isCompleted) {
         try {
           await saveQuestionsMutation.mutateAsync({
             assessmentId: state.currentAssessment.id,
@@ -454,6 +464,7 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
         chiefComplaint={chiefComplaint}
         onComplete={handleSummaryComplete}
         onBack={() => {
+          if (isCompleted) return;
           setShowSummary(false);
           setShowClinicalDecisionSupport(true);
           dispatch({ type: 'SET_STEP', payload: 5 });
@@ -507,6 +518,7 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
   if (showPE) {
     return (
       <PhysicalExamination
+        chiefComplaint={chiefComplaint}
         onComplete={handlePEComplete}
         onBack={() => {
           setShowPE(false);
@@ -601,5 +613,26 @@ export function AssessmentWorkflow({ chiefComplaint, onComplete, onBack }: Asses
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export function AssessmentWorkflow(props: AssessmentWorkflowProps) {
+  const { state } = useMedical();
+  
+  return (
+    <ErrorBoundary
+      fallbackRender={(error, resetErrorBoundary) => (
+        <AssessmentErrorRecovery
+          error={error.message}
+          onRetry={resetErrorBoundary}
+          onRestart={props.onBack}
+          onReturnHome={() => window.location.href = '/'}
+          assessmentId={state.currentAssessment?.id}
+          patientId={state.currentPatient?.id}
+        />
+      )}
+    >
+      <AssessmentWorkflowContent {...props} />
+    </ErrorBoundary>
   );
 }

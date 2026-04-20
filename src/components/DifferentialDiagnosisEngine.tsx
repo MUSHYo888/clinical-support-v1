@@ -89,32 +89,42 @@ export function DifferentialDiagnosisEngine({
       setHasAttempted(true);
       
 
-      // Create timeout promise (30 seconds)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('AI service timeout - taking longer than expected')), 30000)
-      );
+      let data;
+      let currentRetries = 3;
+      let currentDelay = 1000;
+      let success = false;
 
-      // Create API call promise
-      const apiPromise = supabase.functions.invoke('differential-diagnosis', {
-        body: {
-          chiefComplaint,
-          answers: state.answers,
-          rosData: state.rosData,
-          pmhData: state.pmhData,
-          peData: state.peData,
-          assessmentId
+      while (currentRetries >= 0 && !success) {
+        try {
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 30000)
+          );
+
+          const apiPromise = supabase.functions.invoke('differential-diagnosis', {
+            body: {
+              chiefComplaint,
+              answers: state.answers,
+              rosData: state.rosData,
+              pmhData: state.pmhData,
+              peData: state.peData,
+              assessmentId
+            }
+          });
+
+          const result = await Promise.race([apiPromise, timeoutPromise]) as any;
+          
+          if (result.error) throw new Error(result.error.message);
+          if (result.data?.error) throw new Error(result.data.error);
+
+          data = result.data;
+          success = true;
+        } catch (err: any) {
+          if (currentRetries === 0) throw err;
+          console.warn(`Differential Diagnosis AI failed, retrying in ${currentDelay}ms... (${currentRetries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, currentDelay));
+          currentDelay *= 2;
+          currentRetries--;
         }
-      });
-
-      // Race between timeout and API call
-      const { data, error: functionError } = await Promise.race([apiPromise, timeoutPromise]) as any;
-
-      if (functionError) {
-        throw new Error(functionError.message);
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
       }
 
       setDiagnoses(data.differentialDiagnoses || []);
@@ -132,6 +142,36 @@ export function DifferentialDiagnosisEngine({
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate differential diagnosis';
       setError(errorMessage);
       
+      // Circuit Breaker Fallback data
+      const fallbackData = {
+        differentialDiagnoses: [
+          {
+            condition: 'Standard Clinical Evaluation Required',
+            probability: 100,
+            explanation: 'AI diagnostic service is currently unavailable. Please rely on standard clinical reasoning and protocols based on the patient\'s presentation.',
+            keyFeatures: ['Service offline'],
+            urgency: 'moderate',
+            category: 'General',
+            redFlags: []
+          }
+        ],
+        clinicalRecommendations: {
+          immediateActions: ['Proceed with standard clinical evaluation'],
+          investigationPriority: [],
+          redFlagAlert: false,
+          followUpRecommendations: ['Monitor patient condition']
+        },
+        riskStratification: {
+          overallRisk: 'moderate',
+          riskFactors: { diagnosticConfidence: 0, highUrgencyConditions: 0, redFlagConditions: 0 },
+          recommendations: ['Perform comprehensive clinical assessment manually']
+        }
+      };
+
+      setDiagnoses(fallbackData.differentialDiagnoses as any);
+      setRecommendations(fallbackData.clinicalRecommendations);
+      setRiskStratification(fallbackData.riskStratification as any);
+
       if (errorMessage.includes('timeout')) {
         toast.error('AI service is taking longer than expected. You can retry or continue with clinical protocols.');
       } else {
