@@ -120,7 +120,7 @@ export class AssessmentService {
         question_id: questionId,
         answer_value: answer.value,
         notes: answer.notes
-      });
+      }, { onConflict: 'assessment_id,question_id' });
 
     if (error) {
       console.error('Error saving answer:', error);
@@ -138,7 +138,7 @@ export class AssessmentService {
         positive_symptoms: rosData.positive,
         negative_symptoms: rosData.negative,
         notes: rosData.notes
-      });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving ROS data:', error);

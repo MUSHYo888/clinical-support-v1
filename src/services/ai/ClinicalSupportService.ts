@@ -34,16 +34,8 @@ export class ClinicalSupportService {
 
       return result;
     } catch (error) {
-      console.error('All retry attempts exhausted, using fallback clinical protocols:', error);
-      return {
-        investigations: FallbackDataService.getFallbackInvestigations(chiefComplaint),
-        redFlags: FallbackDataService.getFallbackRedFlags(chiefComplaint),
-        guidelines: FallbackDataService.getFallbackGuidelines(chiefComplaint),
-        treatmentRecommendations: [],
-        followUpRecommendations: [],
-        _fallbackMode: true,
-        _lastError: error?.message || 'AI service unavailable'
-      };
+      console.error('All retry attempts exhausted. Throwing error to trigger local clinical fallback protocols:', error);
+      throw error;
     }
   }
 }

@@ -88,13 +88,7 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
     } catch (error) {
       this.logAICall('generateClinicalDecisionSupport', chiefComplaint, false, error);
       
-      return {
-        investigations: FallbackDataService.getFallbackInvestigations(chiefComplaint),
-        redFlags: FallbackDataService.getFallbackRedFlags(chiefComplaint),
-        guidelines: FallbackDataService.getFallbackGuidelines(chiefComplaint),
-        treatmentRecommendations: [],
-        followUpRecommendations: []
-      };
+      throw error;
     }
   }
 

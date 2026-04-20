@@ -31,6 +31,7 @@ import {
   Target,
   Circle,
   Calculator,
+  FileText,
   Upload,
   Plus
 } from 'lucide-react';
