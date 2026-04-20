@@ -128,3 +128,39 @@ export function useCompleteAssessment() {
     },
   });
 }
+
+export function useSavePMH() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assessmentId, pmhData }: { assessmentId: string; pmhData: any }) => {
+      // TODO: Replace with AssessmentService call once the DB table is ready
+      return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 400));
+    },
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
+    },
+    onError: (error) => {
+      console.error('Failed to save PMH data:', error);
+      toast.error('Failed to save past medical history');
+    },
+  });
+}
+
+export function useSavePE() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assessmentId, peData }: { assessmentId: string; peData: any }) => {
+      // TODO: Replace with AssessmentService call once the DB table is ready
+      return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 400));
+    },
+    onSuccess: (_, { assessmentId }) => {
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
+    },
+    onError: (error) => {
+      console.error('Failed to save PE data:', error);
+      toast.error('Failed to save physical examination');
+    },
+  });
+}

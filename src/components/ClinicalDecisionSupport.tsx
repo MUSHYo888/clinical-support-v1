@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
@@ -28,7 +30,9 @@ import {
   Zap,
   Target,
   Circle,
-  Calculator
+  Calculator,
+  Upload,
+  Plus
 } from 'lucide-react';
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
@@ -51,6 +55,7 @@ interface ClinicalPlan {
     selected: string[];
     rationale: string;
     estimatedCost: number;
+    results?: Array<{ name: string, value: string, date: string }>;
   };
   treatment: {
     medications: string[];
@@ -77,6 +82,11 @@ export function ClinicalDecisionSupport({
   const [investigationIntelligence, setInvestigationIntelligence] = useState<any[]>([]);
   const [treatmentRecommendation, setTreatmentRecommendation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [diagnoses, setDiagnoses] = useState<any[]>([]);
+  const [labResults, setLabResults] = useState<Array<{ name: string, value: string, date: string }>>([]);
+  const [newLabName, setNewLabName] = useState('');
+  const [newLabValue, setNewLabValue] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showContinue, setShowContinue] = useState(false);
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,9 +94,6 @@ export function ClinicalDecisionSupport({
   const { state } = useMedical();
   const saveClinicalPlanMutation = useSaveClinicalDecisionSupport();
   
-  // INFINITE LOOP FIX 1: Create a stable empty array reference so the AI hook doesn't refresh constantly
-  const emptyDiagnoses = useMemo(() => [], []);
-
   const {
     recommendations,
     redFlags,
@@ -95,7 +102,7 @@ export function ClinicalDecisionSupport({
     error: aiError
   } = useInvestigationRecommendations(
     chiefComplaint, 
-    emptyDiagnoses, 
+    diagnoses, 
     state.answers, 
     state.rosData
   );
@@ -110,7 +117,7 @@ export function ClinicalDecisionSupport({
     } else if (!aiLoading) {
       setLoading(false);
     }
-  }, [recommendationsJson, aiLoading]); // Trigger based on the stringified data
+  }, [recommendationsJson, aiLoading, diagnoses]); 
 
   // Show "continue anyway" after 15 seconds of loading
   useEffect(() => {
@@ -139,7 +146,7 @@ export function ClinicalDecisionSupport({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan]);
+  }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan, labResults]);
 
   // === HELPER FUNCTIONS ===
 
@@ -153,7 +160,7 @@ export function ClinicalDecisionSupport({
             rec.investigation.id,
             chiefComplaint,
             { answers: state.answers, rosData: state.rosData },
-            emptyDiagnoses
+            diagnoses
           );
           return { ...rec, intelligence };
         })
@@ -164,7 +171,7 @@ export function ClinicalDecisionSupport({
         chiefComplaint,
         'moderate',
         state.currentPatient,
-        emptyDiagnoses
+        diagnoses
       );
       setTreatmentRecommendation(treatment);
 
@@ -206,6 +213,22 @@ export function ClinicalDecisionSupport({
       .reduce((total, item) => total + (item.intelligence.costBenefit.estimatedCost || 0), 0);
   };
 
+  const handleAddLabResult = () => {
+    if (newLabName.trim() && newLabValue.trim()) {
+      setLabResults(prev => [...prev, { name: newLabName.trim(), value: newLabValue.trim(), date: new Date().toISOString() }]);
+      setNewLabName('');
+      setNewLabValue('');
+    }
+  };
+
+  const handleFileUpload = () => {
+    setIsUploading(true);
+    setTimeout(() => {
+      setIsUploading(false);
+      toast.success("Lab report uploaded successfully (Simulated)");
+    }, 1500);
+  };
+
   const getCompletionStatus = () => {
     const investigationsSelected = selectedInvestigations.length > 0;
     const treatmentSelected = selectedMedications.length > 0 || selectedNonPharm.length > 0;
@@ -242,7 +265,8 @@ export function ClinicalDecisionSupport({
       investigations: {
         selected: selectedInvestigations,
         rationale: investigationRationale,
-        estimatedCost: calculateTotalCost()
+        estimatedCost: calculateTotalCost(),
+        results: labResults
       },
       treatment: {
         medications: selectedMedications,
@@ -274,7 +298,8 @@ export function ClinicalDecisionSupport({
       investigations: {
         selected: selectedInvestigations,
         rationale: investigationRationale,
-        estimatedCost: calculateTotalCost()
+        estimatedCost: calculateTotalCost(),
+        results: labResults
       },
       treatment: {
         medications: selectedMedications,
@@ -476,7 +501,7 @@ export function ClinicalDecisionSupport({
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="diagnosis" className="flex items-center space-x-2">
                 <Brain className="h-4 w-4" />
                 <span>AI Diagnosis</span>
@@ -490,6 +515,11 @@ export function ClinicalDecisionSupport({
                 <span>Investigations</span>
                 {investigationsSelected && <CheckCircle2 className="h-4 w-4 text-green-600" />}
               </TabsTrigger>
+              <TabsTrigger value="results" className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span>Lab Results</span>
+                {labResults.length > 0 && <Badge variant="secondary" className="ml-1">{labResults.length}</Badge>}
+              </TabsTrigger>
               <TabsTrigger value="treatment" className="flex items-center space-x-2">
                 <Pill className="h-4 w-4" />
                 <span>Treatment & Management</span>
@@ -501,8 +531,9 @@ export function ClinicalDecisionSupport({
               <DifferentialDiagnosisEngine
                 chiefComplaint={chiefComplaint}
                 assessmentId={state.currentAssessment?.id}
-                onDiagnosisGenerated={(diagnoses) => {
-                  toast.success(`Generated ${diagnoses.length} differential diagnoses`);
+                onDiagnosisGenerated={(newDiagnoses) => {
+                  setDiagnoses(newDiagnoses);
+                  toast.success(`Generated ${newDiagnoses.length} differential diagnoses`);
                 }}
               />
             </TabsContent>
@@ -661,6 +692,71 @@ export function ClinicalDecisionSupport({
                 {!hasRationale && validationErrors.length > 0 && (
                   <p className="text-sm text-destructive mt-1">Clinical rationale is required</p>
                 )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="results" className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Manual Result Entry */}
+                <Card className="flex-1 border-l-4 border-l-blue-500">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Manual Result Entry</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Test Name</Label>
+                        <Input 
+                          placeholder="e.g. Hemoglobin A1c" 
+                          value={newLabName}
+                          onChange={(e) => setNewLabName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Result / Value</Label>
+                        <Input 
+                          placeholder="e.g. 6.2%" 
+                          value={newLabValue}
+                          onChange={(e) => setNewLabValue(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddLabResult()}
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={handleAddLabResult} variant="secondary" className="w-full" disabled={!newLabName || !newLabValue}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Result
+                    </Button>
+                    
+                    {labResults.length > 0 && (
+                      <div className="mt-6 space-y-2">
+                        <Label>Recorded Results:</Label>
+                        {labResults.map((res, i) => (
+                          <div key={i} className="flex justify-between items-center bg-muted p-2 rounded-md text-sm">
+                            <span className="font-medium">{res.name}</span>
+                            <span className="text-primary">{res.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Lab Report Upload */}
+                <Card className="flex-1 border-dashed border-2 bg-muted/20">
+                  <CardContent className="flex flex-col items-center justify-center h-full min-h-[250px] space-y-4 p-6">
+                    <div className="p-4 bg-primary/10 rounded-full">
+                      <Upload className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <h4 className="font-medium text-lg">Upload Lab Report</h4>
+                      <p className="text-sm text-muted-foreground">PDF, JPG, or PNG up to 10MB</p>
+                    </div>
+                    <Button onClick={handleFileUpload} disabled={isUploading} className="w-full max-w-[200px]">
+                      {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                      {isUploading ? 'Uploading...' : 'Select File'}
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
