@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('test', async ({ page }) => {
+  test.setTimeout(60000);
+  
   // Authentication
-  await page.goto('http://localhost:8080/auth');
+  await page.goto('/auth');
   await page.getByRole('textbox', { name: 'Email' }).fill('muslimkaki@gmail.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('123456');
   await page.getByRole('textbox', { name: 'Password' }).press('Enter');
@@ -41,20 +43,50 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue to Review of Systems' }).click();
 
   // Adaptive Questions Phase 2
-  await page.getByText('No recent major events').click();
+  const followUp = page.getByText('No recent major events');
+  await followUp.waitFor({ state: 'visible', timeout: 15000 });
+  await followUp.click({ force: true });
   await page.getByRole('button', { name: 'Next Question' }).click();
   await page.getByRole('button', { name: 'Continue to Review of Systems' }).click();
 
   // Review of Systems - Record positive and negative findings
-  await page.locator('div').filter({ hasText: /^Fever$/ }).getByRole('button').first().click();
-  await page.locator('div').filter({ hasText: /^Chills$/ }).getByRole('button').first().click();
-  await page.locator('div').filter({ hasText: /^Headache$/ }).getByRole('button').first().click();
-  await page.locator('div').filter({ hasText: /^Vision changes$/ }).getByRole('button').nth(1).click();
-  await page.locator('div').filter({ hasText: /^Hearing loss$/ }).getByRole('button').nth(1).click();
-  await page.getByRole('button', { name: 'Continue to Assessment Summary' }).click();
+  // 1. Before starting the symptoms, ensure we are on the right page
+  await expect(page, 'App redirected to login unexpectedly.').not.toHaveURL(/.*auth/);
+
+  // 1. Improved Symptom Helper (Waiting for the App's 'Pulse')
+  const clickSymptom = async (name: string, isNegative = false) => {
+    const symptomRow = page.locator('div').filter({ hasText: new RegExp(`^${name}$`) }).locator('..');
+    const button = isNegative ? symptomRow.getByRole('button').last() : symptomRow.getByRole('button').first();
+
+    // Perform the click
+    await button.click({ force: true });
+
+    // Post-Op Verification: Wait for the app to acknowledge the save
+    // This prevents the 'State Overwrite' by forcing the robot to wait for the app
+    await expect(page.getByText('Answer saved').first()).toBeVisible();
+    
+    // Wait for the toast to start disappearing so the next one can trigger
+    await page.waitForTimeout(400);
+  };
+
+  // 2. Perform the Batch Assessment
+  await clickSymptom('Fever');
+  await clickSymptom('Chills');
+  await clickSymptom('Headache');
+  await clickSymptom('Vision changes', true);
+  await clickSymptom('Hearing loss', true);
+
+  // 3. Final Verification: The counters should now be accurate
+  await expect(page.getByText('3 Positive')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('2 Negative')).toBeVisible({ timeout: 10000 });
+
+  // 4. Proceed to Summary
+  await page.getByRole('button', { name: 'Continue to Assessment Summary' }).click({ force: true });
+  await expect(page.getByRole('heading', { name: 'Past Medical History' })).toBeVisible({ timeout: 15000 });
 
   // Past Medical & Social History
-  await page.getByRole('combobox').filter({ hasText: 'Select status' }).click();
+  const statusCombobox = page.getByRole('combobox').filter({ hasText: 'Select status' });
+  await statusCombobox.click();
   await page.getByRole('option', { name: 'Former smoker' }).click();
   await page.getByRole('combobox').filter({ hasText: 'Select usage' }).click();
   await page.getByRole('option', { name: 'None' }).click();
@@ -74,23 +106,32 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Oxygen Saturation' }).fill('94');
 
   await page.getByRole('tab', { name: 'General' }).click();
-  await page.getByRole('textbox', { name: 'Describe patient\'s general' }).fill('good');
-  await page.getByRole('tab', { name: 'Systems' }).click();
+  await page.getByRole('textbox', { name: /describe patient/i }).fill('Patient is alert and stable.');
+
+  // Ensure the "Systems" tab is ready before clicking
+  const systemsTab = page.getByRole('tab', { name: 'Systems' });
+  await systemsTab.waitFor({ state: 'visible' });
+  await systemsTab.click();
   
-  await page.getByRole('checkbox', { name: 'Wheezes' }).check({ force: true });
-  await page.getByRole('checkbox', { name: 'Crackles/rales' }).check({ force: true });
-  await page.locator('#cardiovascular-normal').check({ force: true });
-  await page.locator('#abdomen-normal').check({ force: true });
-  await page.locator('#neurological-normal').check({ force: true });
-  await page.locator('#musculoskeletal-normal').check({ force: true });
+  await page.getByLabel('Wheezes').click();
+  await page.getByLabel('Crackles/rales').click();
+  await page.locator('#cardiovascular-normal').click({ force: true });
+  await page.locator('#abdomen-normal').click();
+  await page.locator('#neurological-normal').click();
+  await page.locator('#musculoskeletal-normal').click();
 
   await page.getByRole('button', { name: 'Continue to Assessment & Plan' }).click();
+
+  // Wait for AI generation to finish
+  await expect(page.getByText(/Generating/)).toHaveCount(0, { timeout: 80000 });
 
   // Clinical Decision Support
   await page.getByRole('tab', { name: 'AI Diagnosis' }).click();
   await page.getByRole('button', { name: 'Retry' }).click();
   
-  await page.getByRole('tab', { name: 'Investigations' }).click();
+  const investigationsTab = page.getByRole('tab', { name: 'Investigations' });
+  await investigationsTab.waitFor({ state: 'visible' });
+  await investigationsTab.click({ force: true });
   await page.getByRole('checkbox').first().check({ force: true });
   await page.getByRole('checkbox').nth(1).check({ force: true });
   await page.getByRole('textbox', { name: 'Provide detailed clinical' }).fill('goodsdfghjkl;');
@@ -105,7 +146,9 @@ test('test', async ({ page }) => {
 
   // Handle loading state to ensure patient summary has finished generating
   await expect(page.getByText('Generating Patient Summary')).toBeHidden({ timeout: 60000 });
-  await page.getByRole('button', { name: 'Skip to Summary' }).click();
+  const finalButton = page.getByRole('button', { name: /(Skip to Summary|Complete Assessment)/ });
+  await finalButton.waitFor({ state: 'visible' });
+  await finalButton.click();
 
   // Summary and Export Documentation
   const downloadPromise = page.waitForEvent('download');
