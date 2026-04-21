@@ -120,7 +120,7 @@ export class AssessmentService {
         question_id: questionId,
         answer_value: answer.value,
         notes: answer.notes
-      }, { onConflict: 'assessment_id,question_id' });
+      });
 
     if (error) {
       console.error('Error saving answer:', error);

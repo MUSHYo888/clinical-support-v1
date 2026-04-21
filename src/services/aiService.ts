@@ -4,10 +4,8 @@
 import { Question, DifferentialDiagnosis } from '@/types/medical';
 import { AdvancedClinicalSupport } from '@/types/clinical-scores';
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
-import { QuestionGeneratorService } from './ai/QuestionGeneratorService';
-import { DifferentialDiagnosisService } from './ai/DifferentialDiagnosisService';
-import { ClinicalSupportService } from './ai/ClinicalSupportService';
 import { FallbackDataService } from './fallback/FallbackDataService';
+import { withRetry } from '@/utils/withRetry';
 
 export class AIService {
 private static logAICall(service: string, chiefComplaint: string, success: boolean, error?: any) {
@@ -21,24 +19,73 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
     });
   }
 
+  private static generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  private static async callGroq(systemPrompt: string, userPrompt: string): Promise<any> {
+    return withRetry(async () => {
+      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      if (!apiKey) throw new Error('VITE_GROQ_API_KEY is not configured in environment variables');
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Groq API Error: ${response.status} ${err}`);
+      }
+
+      const data = await response.json();
+      return JSON.parse(data.choices[0].message.content);
+    }, 3, 1000);
+  }
+
   static async generateQuestions(
     chiefComplaint: string, 
     previousAnswers?: Record<string, any>
   ): Promise<Question[]> {
     try {
+      const systemPrompt = `You are a clinical AI assistant generating focused medical history questions.
+      Generate 4-6 relevant questions following the SOCRATES/OLDCARTS framework.
+      Return ONLY a valid JSON object with a "questions" array matching this structure:
+      { "questions": [ { "id": "uuid", "text": "Question text?", "type": "multiple-choice", "options": ["Option 1", "Option 2"], "category": "onset", "required": true } ] }`;
       
-      const questions = await QuestionGeneratorService.generateQuestions(chiefComplaint, previousAnswers);
+      const userPrompt = `Chief complaint: ${chiefComplaint}\nPrevious answers: ${JSON.stringify(previousAnswers || {})}`;
       
+      const result = await this.callGroq(systemPrompt, userPrompt);
+      const questions = (result.questions || []).map((q: any) => ({
+        ...q,
+        id: q.id && q.id !== 'uuid' ? q.id : this.generateUUID(),
+        type: q.type || 'text',
+        category: q.category || 'general',
+        required: typeof q.required === 'boolean' ? q.required : true
+      }));
+
       this.logAICall('generateQuestions', chiefComplaint, true);
-      
       return questions;
     } catch (error) {
       this.logAICall('generateQuestions', chiefComplaint, false, error);
       
-      // Enhanced fallback with better error messaging
-      const fallbackQuestions = FallbackDataService.getFallbackQuestions(chiefComplaint);
-      
-      return fallbackQuestions;
+      return FallbackDataService.getFallbackQuestions(chiefComplaint);
     }
   }
 
@@ -48,22 +95,21 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
     rosData?: Record<string, any>
   ): Promise<DifferentialDiagnosis[]> {
     try {
+      const systemPrompt = `You are an expert clinical diagnostician. Analyze the clinical presentation and generate a comprehensive differential diagnosis list.
+      Return ONLY a valid JSON object with a "differentials" array matching this exact structure:
+      { "differentials": [ { "condition": "Condition Name", "probability": 85, "explanation": "Clinical reasoning", "keyFeatures": ["Supporting feature 1"], "conflictingFeatures": ["Feature against"], "urgency": "high", "category": "cardiovascular", "redFlags": ["Red flag 1"] } ] }
+      Generate 5-8 diagnoses ranked by probability (0-100). Include common and serious conditions.`;
+
+      const userPrompt = `Chief Complaint: ${chiefComplaint}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const differentials = await DifferentialDiagnosisService.generateDifferentialDiagnosis(
-        chiefComplaint, 
-        answers, 
-        rosData
-      );
-      
+      const result = await this.callGroq(systemPrompt, userPrompt);
+
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, true);
-      
-      return differentials;
+      return result.differentials || [];
     } catch (error) {
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, false, error);
       
-      const fallbackDifferentials = FallbackDataService.getFallbackDifferentials(chiefComplaint);
-      
-      return fallbackDifferentials;
+      return FallbackDataService.getFallbackDifferentials(chiefComplaint);
     }
   }
 
@@ -74,17 +120,17 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
     rosData?: Record<string, any>
   ): Promise<any> {
     try {
+      const systemPrompt = `You are a clinical AI assistant providing investigation recommendations and clinical decision support.
+      Return ONLY a valid JSON object matching this exact structure:
+      { "investigations": [ { "investigation": { "id": "unique_id", "name": "Test Name", "type": "laboratory", "category": "Cat", "indication": "Reason", "urgency": "routine", "cost": "low", "rationale": "Scientific rationale" }, "priority": 1, "clinicalRationale": "Why this is recommended", "contraindications": [] } ], "redFlags": [ { "condition": "Name", "severity": "high", "description": "Desc", "immediateActions": ["Action1"] } ], "guidelines": [ { "title": "Guideline title", "source": "Source", "recommendation": "Recommendation", "evidenceLevel": "A", "applicableConditions": ["Condition1"] } ], "treatmentRecommendations": ["Treatment1"], "followUpRecommendations": ["Followup1"] }
+      Provide evidence-based recommendations.`;
+
+      const userPrompt = `Chief complaint: ${chiefComplaint}\nDifferential diagnoses: ${JSON.stringify(differentialDiagnoses)}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const support = await ClinicalSupportService.generateClinicalDecisionSupport(
-        chiefComplaint, 
-        differentialDiagnoses, 
-        answers, 
-        rosData
-      );
-      
+      const result = await this.callGroq(systemPrompt, userPrompt);
+
       this.logAICall('generateClinicalDecisionSupport', chiefComplaint, true);
-      
-      return support;
+      return result;
     } catch (error) {
       this.logAICall('generateClinicalDecisionSupport', chiefComplaint, false, error);
       
