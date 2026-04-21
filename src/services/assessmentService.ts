@@ -1,7 +1,8 @@
 // ABOUTME: Service for assessment workflow operations with Supabase
 // ABOUTME: Manages assessment lifecycle, questions, answers, and ROS data
 import { supabase } from '@/integrations/supabase/client';
-import { Assessment, Question, Answer, ReviewOfSystems } from '@/types/medical';
+import { Assessment, Question, Answer, ReviewOfSystems, PastMedicalHistoryData } from '@/types/medical';
+import { PhysicalExamData } from '@/types/physical-exam';
 
 // Helper function to validate UUID format
 function isValidUUID(uuid: string): boolean {
@@ -138,15 +139,17 @@ export class AssessmentService {
         positive_symptoms: rosData.positive,
         negative_symptoms: rosData.negative,
         notes: rosData.notes
-      }, { onConflict: 'assessment_id,system_name' });
-      
+      }, { 
+        onConflict: 'assessment_id,system_name' 
+      });
+
     if (error) {
       console.error('Error saving ROS data:', error);
       throw new Error('Failed to save review of systems');
     }
   }
 
-  static async savePastMedicalHistory(assessmentId: string, pmhData: any): Promise<void> {
+  static async savePastMedicalHistory(assessmentId: string, pmhData: PastMedicalHistoryData): Promise<void> {
     const { error } = await supabase
       .from('past_medical_history')
       .upsert({
@@ -166,7 +169,7 @@ export class AssessmentService {
     }
   }
 
-  static async savePhysicalExamination(assessmentId: string, peData: any): Promise<void> {
+  static async savePhysicalExamination(assessmentId: string, peData: PhysicalExamData): Promise<void> {
     const { error } = await supabase
       .from('physical_examination')
       .upsert({
@@ -262,7 +265,7 @@ export class AssessmentService {
     return rosData;
   }
 
-  static async getPastMedicalHistory(assessmentId: string): Promise<any | null> {
+  static async getPastMedicalHistory(assessmentId: string): Promise<PastMedicalHistoryData | null> {
     const { data, error } = await supabase
       .from('past_medical_history')
       .select('*')
@@ -282,7 +285,7 @@ export class AssessmentService {
     };
   }
 
-  static async getPhysicalExamination(assessmentId: string): Promise<any | null> {
+  static async getPhysicalExamination(assessmentId: string): Promise<PhysicalExamData | null> {
     const { data, error } = await supabase
       .from('physical_examination')
       .select('*')

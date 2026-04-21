@@ -67,6 +67,26 @@ export interface ClinicalSummary {
   plan: string;
 }
 
+export interface SocialHistoryData {
+  smokingStatus: string;
+  packYears: string;
+  alcoholUse: string;
+  alcoholDetails: string;
+  occupation: string;
+  livingSituation: string;
+  otherNotes: string;
+}
+
+export interface PastMedicalHistoryData {
+  conditions: string[];
+  surgeries: string[];
+  medications: string[];
+  allergies: string[];
+  familyHistory: string;
+  socialHistory: string;
+  socialHistoryStructured?: SocialHistoryData;
+}
+
 export interface Investigation {
   id: string;
   name: string;
