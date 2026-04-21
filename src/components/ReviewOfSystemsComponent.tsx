@@ -2,7 +2,7 @@
 // ABOUTME: Review of Systems component with 3-state toggles (Positive/Negative/Not Asked)
 // ABOUTME: Includes gender-based smart filtering and auto-flagging of positive findings
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -108,14 +108,9 @@ interface ReviewOfSystemsComponentProps {
 export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystemsComponentProps) {
   const { state, dispatch } = useMedical();
   const [symptomStates, setSymptomStates] = useState<Record<string, Record<string, SymptomState>>>({});
-  const symptomStatesRef = useRef<Record<string, Record<string, SymptomState>>>({});
   const [systemNotes, setSystemNotes] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const saveROSMutation = useSaveROS();
-
-  // Keep ref perfectly in sync for the initial render and external updates
-  useEffect(() => {
-    symptomStatesRef.current = symptomStates;
-  }, [symptomStates]);
 
   const patientGender = state.currentPatient?.gender;
 
@@ -124,39 +119,16 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
     return system.genderFilter === patientGender;
   });
 
-  const toggleSymptomState = async (systemName: string, symptom: string, targetState: 'positive' | 'negative') => {
-    // 1. Get latest state from ref to avoid stale closures during rapid clicks
-    const prev = symptomStatesRef.current;
-    const current = prev[systemName]?.[symptom] || null;
-    const next = current === targetState ? null : targetState;
-    
-    // 2. Calculate the new arrays FIRST
-    const newSystemState = { ...(prev[systemName] || {}), [symptom]: next };
-    const newState = { ...prev, [systemName]: newSystemState };
-    
-    // 3. Update ref immediately so subsequent fast clicks see the change instantly
-    symptomStatesRef.current = newState;
-
-    // 4. Update React UI instantly
-    setSymptomStates(newState);
-
-    // 5. Create the exact payload for Supabase
-    const positive = Object.keys(newSystemState).filter(k => newSystemState[k] === 'positive');
-    const negative = Object.keys(newSystemState).filter(k => newSystemState[k] === 'negative');
-    const notes = systemNotes[systemName] || '';
-
-    // 6. Send the EXACT SAME calculated data to Supabase
-    if (state.currentAssessment) {
-      try {
-        await saveROSMutation.mutateAsync({
-          assessmentId: state.currentAssessment.id,
-          systemName,
-          rosData: { positive, negative, notes }
-        });
-      } catch (error) {
-        console.error('Failed to save ROS data:', error);
-      }
-    }
+  const toggleSymptomState = (systemName: string, symptom: string, targetState: 'positive' | 'negative') => {
+    setSymptomStates(prev => {
+      const current = prev[systemName]?.[symptom] || null;
+      const next = current === targetState ? null : targetState;
+      
+      return {
+        ...prev,
+        [systemName]: { ...(prev[systemName] || {}), [symptom]: next }
+      };
+    });
   };
 
   const handleSystemNotes = (systemName: string, notes: string) => {
@@ -195,6 +167,7 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
     dispatch({ type: 'SET_ROS_DATA', payload: rosDataForContext });
 
     if (state.currentAssessment) {
+      setIsSaving(true);
       try {
         const savePromises = Object.keys(rosDataForContext).map(systemName =>
           saveROSMutation.mutateAsync({
@@ -204,12 +177,15 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
           })
         );
         await Promise.all(savePromises);
+        onComplete();
       } catch (error) {
         console.error('Failed to save ROS data:', error);
+      } finally {
+        setIsSaving(false);
       }
+    } else {
+      onComplete();
     }
-
-    onComplete();
   };
 
   const totalPositive = filteredSystems.reduce((sum, sys) => sum + getPositiveSymptoms(sys.name).length, 0);
@@ -325,8 +301,8 @@ export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystems
             <Button variant="outline" onClick={onBack}>
               Back to History
             </Button>
-            <Button onClick={handleComplete}>
-              Continue to Assessment Summary
+            <Button onClick={handleComplete} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Continue to Assessment Summary'}
             </Button>
           </div>
         </CardContent>
