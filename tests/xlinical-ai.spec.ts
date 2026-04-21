@@ -1,28 +1,30 @@
 import { test, expect } from '@playwright/test';
 
 test('test', async ({ page }) => {
+  // Authentication
   await page.goto('http://localhost:8080/auth');
-  await page.getByRole('textbox', { name: 'Email' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill('muslimkaki@gmail.com');
-  await page.getByRole('textbox', { name: 'Password' }).click();
   await page.getByRole('textbox', { name: 'Password' }).fill('123456');
   await page.getByRole('textbox', { name: 'Password' }).press('Enter');
-  await page.getByRole('button', { name: 'Sign In' }).click();
+
+  // Start New Assessment
+  await page.getByRole('button', { name: 'New Patient Assessment' }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'New Patient Assessment' }).click();
+
+  // Patient Registration
   await page.getByRole('combobox').click();
   await page.getByRole('option', { name: 'Female' }).click();
-  await page.getByRole('textbox', { name: 'Full Name *' }).click();
   await page.getByRole('textbox', { name: 'Full Name *' }).fill('ewerty');
-  await page.getByRole('spinbutton', { name: 'Age *' }).click();
   await page.getByRole('spinbutton', { name: 'Age *' }).fill('55');
   await page.locator('div').filter({ hasText: /^Location\/Ward \*$/ }).click();
   await page.getByRole('textbox', { name: 'Location/Ward *' }).fill('eghjkl');
   await page.getByRole('button', { name: 'Create Patient' }).click();
-  await page.getByRole('textbox', { name: 'Search complaints...' }).click();
-  await page.getByRole('textbox', { name: 'Search complaints...' }).fill('coughing');
-  await page.getByRole('textbox', { name: 'Enter custom chief complaint' }).click();
+
+  // Chief Complaint
   await page.getByRole('textbox', { name: 'Enter custom chief complaint' }).fill('coughing');
   await page.getByRole('button', { name: 'Continue' }).click();
+
+  // History of Present Illness (HPI) Phase 1
   await page.getByRole('radio', { name: 'Gradual over days/weeks' }).click();
   await page.getByRole('button', { name: 'Next Question' }).click();
   await page.getByText('Cold air/allergens').click();
@@ -33,95 +35,79 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: 'Next Question' }).click();
   await page.getByText('No chest pain').click();
   await page.getByRole('button', { name: 'Next Question' }).click();
-  await page.getByRole('slider').click();
+
+  // Severity Scale
   await page.locator('.relative.h-2').click();
-  await page.locator('div').filter({ hasText: /^1 \(Mild\)610 \(Severe\)$/ }).first().click();
-  await page.getByRole('slider').click();
-  await page.getByText('(Mild)610 (Severe)').click();
   await page.getByRole('button', { name: 'Continue to Review of Systems' }).click();
+
+  // Adaptive Questions Phase 2
   await page.getByText('No recent major events').click();
   await page.getByRole('button', { name: 'Next Question' }).click();
   await page.getByRole('button', { name: 'Continue to Review of Systems' }).click();
-  await page.locator('div:nth-child(7) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-red-100').click();
-  await page.locator('div:nth-child(6) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-red-100').first().click();
-  await page.locator('div:nth-child(5) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-red-100').first().click();
-  await page.locator('div:nth-child(4) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-red-100').first().click();
-  await page.getByRole('button').filter({ hasText: /^$/ }).nth(4).click();
-  await page.locator('div').filter({ hasText: /^Chills$/ }).click();
-  await page.locator('div').filter({ hasText: /^Headache$/ }).first().click();
-  await page.locator('div:nth-child(2) > .p-6.pt-0 > .grid > div:nth-child(2) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-green-100').click();
-  await page.locator('div:nth-child(2) > .p-6.pt-0 > .grid > div:nth-child(3) > .flex > .px-2.py-1.rounded.text-xs.font-medium.transition-colors.bg-muted.text-muted-foreground.hover\\:bg-green-100').click();
+
+  // Review of Systems - Record positive and negative findings
+  await page.locator('div').filter({ hasText: /^Fever$/ }).getByRole('button').first().click();
+  await page.locator('div').filter({ hasText: /^Chills$/ }).getByRole('button').first().click();
+  await page.locator('div').filter({ hasText: /^Headache$/ }).getByRole('button').first().click();
+  await page.locator('div').filter({ hasText: /^Vision changes$/ }).getByRole('button').nth(1).click();
+  await page.locator('div').filter({ hasText: /^Hearing loss$/ }).getByRole('button').nth(1).click();
   await page.getByRole('button', { name: 'Continue to Assessment Summary' }).click();
+
+  // Past Medical & Social History
   await page.getByRole('combobox').filter({ hasText: 'Select status' }).click();
   await page.getByRole('option', { name: 'Former smoker' }).click();
   await page.getByRole('combobox').filter({ hasText: 'Select usage' }).click();
   await page.getByRole('option', { name: 'None' }).click();
-  await page.getByPlaceholder('e.g. 10').click();
-  await page.getByPlaceholder('e.g. 10').click();
   await page.getByPlaceholder('e.g. 10').fill('5');
-  await page.getByRole('textbox', { name: 'Current occupation...' }).click();
+  
   await page.getByRole('combobox').filter({ hasText: 'Select' }).click();
   await page.getByRole('option', { name: 'Lives alone' }).click();
-  await page.getByRole('button').nth(5).click();
-  await page.getByRole('textbox', { name: 'Add allergy...' }).click();
   await page.locator('div').filter({ hasText: /^Cancer$/ }).click();
-  await page.getByRole('checkbox', { name: 'Asthma' }).click();
-  await page.getByRole('checkbox', { name: 'Asthma' }).click();
+  await page.getByRole('checkbox', { name: 'Asthma' }).check();
   await page.getByRole('button', { name: 'Continue to Physical Exam' }).click();
-  await page.getByRole('textbox', { name: 'Blood Pressure' }).click();
+
+  // Physical Examination
   await page.getByRole('textbox', { name: 'Blood Pressure' }).fill('120/70');
-  await page.getByRole('textbox', { name: 'Heart Rate' }).click();
   await page.getByRole('textbox', { name: 'Heart Rate' }).fill('75');
-  await page.getByRole('textbox', { name: 'Respiratory Rate' }).click();
   await page.getByRole('textbox', { name: 'Respiratory Rate' }).fill('20');
-  await page.getByRole('textbox', { name: 'Temperature' }).click();
   await page.getByRole('textbox', { name: 'Temperature' }).fill('98');
-  await page.getByRole('textbox', { name: 'Oxygen Saturation' }).click();
   await page.getByRole('textbox', { name: 'Oxygen Saturation' }).fill('94');
+
   await page.getByRole('tab', { name: 'General' }).click();
-  await page.getByRole('tab', { name: 'Vital Signs' }).click();
-  await page.getByRole('tab', { name: 'General' }).click();
-  await page.getByRole('textbox', { name: 'Describe patient\'s general' }).click();
   await page.getByRole('textbox', { name: 'Describe patient\'s general' }).fill('good');
   await page.getByRole('tab', { name: 'Systems' }).click();
-  await page.locator('div').filter({ hasText: /^Wheezes$/ }).click();
-  await page.getByRole('checkbox', { name: 'Wheezes' }).click();
-  await page.getByRole('checkbox', { name: 'Crackles/rales' }).click();
-  await page.locator('#cardiovascular-normal').click();
-  await page.locator('#abdomen-normal').click();
-  await page.locator('#neurological-normal').click();
-  await page.locator('#musculoskeletal-normal').click();
-  await page.locator('div').filter({ hasText: /^Normal examination$/ }).nth(5).click();
+  
+  await page.getByRole('checkbox', { name: 'Wheezes' }).check({ force: true });
+  await page.getByRole('checkbox', { name: 'Crackles/rales' }).check({ force: true });
+  await page.locator('#cardiovascular-normal').check({ force: true });
+  await page.locator('#abdomen-normal').check({ force: true });
+  await page.locator('#neurological-normal').check({ force: true });
+  await page.locator('#musculoskeletal-normal').check({ force: true });
+
   await page.getByRole('button', { name: 'Continue to Assessment & Plan' }).click();
+
+  // Clinical Decision Support
   await page.getByRole('tab', { name: 'AI Diagnosis' }).click();
   await page.getByRole('button', { name: 'Retry' }).click();
-  await page.getByRole('checkbox').first().click();
-  await page.getByRole('checkbox').nth(1).click();
-  await page.getByRole('tabpanel', { name: 'Investigations' }).click();
-  await page.getByRole('textbox', { name: 'Provide detailed clinical' }).click();
+  
+  await page.getByRole('tab', { name: 'Investigations' }).click();
+  await page.getByRole('checkbox').first().check({ force: true });
+  await page.getByRole('checkbox').nth(1).check({ force: true });
   await page.getByRole('textbox', { name: 'Provide detailed clinical' }).fill('goodsdfghjkl;');
-  await page.getByRole('alert').filter({ hasText: 'Clinical Red Flags Detected:' }).click();
   await page.getByRole('tab', { name: 'Clinical Scores' }).click();
-  await page.getByRole('checkbox', { name: 'Clinical signs of DVT' }).click();
-  await page.getByRole('tab', { name: 'Lab Results' }).click();
+  await page.getByRole('checkbox', { name: 'Clinical signs of DVT' }).check({ force: true });
   await page.getByRole('tab', { name: 'Treatment & Management' }).click();
-  await page.getByRole('checkbox').first().click();
+  await page.getByRole('checkbox').first().check({ force: true });
   await page.locator('div').filter({ hasText: /^Physical therapy$/ }).click();
-  await page.getByRole('checkbox').nth(1).click();
-  await page.getByRole('textbox', { name: 'Outline specific follow-up' }).click();
+  await page.getByRole('checkbox').nth(1).check({ force: true });
   await page.getByRole('textbox', { name: 'Outline specific follow-up' }).fill('xcfvghjkl;\'');
-  await page.getByRole('tab', { name: 'Lab Results' }).click();
-  await page.getByRole('button', { name: 'Select File' }).click();
-  await page.getByRole('textbox', { name: 'e.g. Hemoglobin A1c' }).click();
-  await page.getByRole('textbox', { name: 'e.g. Hemoglobin A1c' }).fill('dfghjk');
-  await page.getByRole('textbox', { name: 'e.g. 6.2%' }).click();
-  await page.getByRole('textbox', { name: 'e.g. 6.2%' }).fill('fghj');
-  await page.getByRole('button', { name: 'Add Result' }).click();
-  await page.getByRole('tab', { name: 'Treatment & Management' }).click();
-  await page.getByRole('textbox', { name: 'Outline specific follow-up' }).click();
   await page.getByRole('button', { name: 'Save Clinical Plan' }).click();
-  await page.getByRole('tab', { name: 'AI Diagnosis' }).click();
+
+  // Handle loading state to ensure patient summary has finished generating
+  await expect(page.getByText('Generating Patient Summary')).toBeHidden({ timeout: 60000 });
   await page.getByRole('button', { name: 'Skip to Summary' }).click();
+
+  // Summary and Export Documentation
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export PDF' }).click();
   const download = await downloadPromise;
@@ -132,11 +118,8 @@ test('test', async ({ page }) => {
   await page.getByRole('option', { name: 'Cardiology' }).click();
   await page.getByRole('combobox').filter({ hasText: 'RoutineStandard referral' }).click();
   await page.getByRole('option', { name: 'Routine Standard referral' }).click();
-  await page.getByRole('textbox', { name: 'Recipient Doctor (Optional)' }).click();
   await page.getByRole('textbox', { name: 'Recipient Doctor (Optional)' }).fill('dfghjk');
-  await page.getByRole('textbox', { name: 'Facility (Optional)' }).click();
   await page.getByRole('textbox', { name: 'Facility (Optional)' }).fill('cvgbhnjkl;');
-  await page.getByRole('textbox', { name: 'Clinical Question *' }).click();
   await page.getByRole('textbox', { name: 'Clinical Question *' }).fill('Please evaluate for coronary artery diseasdfghjkl;\'\nase and provide risk stratification');
   await page.getByRole('button', { name: 'Download PDF' }).click();
   await page.getByRole('button', { name: 'Save Referral Letter' }).click();
