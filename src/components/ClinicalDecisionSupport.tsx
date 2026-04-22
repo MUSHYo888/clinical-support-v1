@@ -1,7 +1,7 @@
 // ABOUTME: Unified clinical decision support component integrating investigations and treatment planning
 // ABOUTME: Provides seamless workflow between diagnostic testing and therapeutic decisions
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,6 +43,13 @@ import { ClinicalScoringSystem } from './ClinicalScoringSystem';
 import { useMedical } from '@/context/MedicalContext';
 import { useSaveClinicalDecisionSupport } from '@/hooks/useClinicalDecisionSupport';
 import { toast } from 'sonner';
+import { DifferentialDiagnosis, InvestigationRecommendation } from '@/types/medical';
+import { TreatmentRecommendation, MedicationSuggestion } from '@/types/treatment-management';
+import { InvestigationIntelligence, Contraindication, Warning } from '@/types/investigation-intelligence';
+
+type EnrichedInvestigation = InvestigationRecommendation & {
+  intelligence: InvestigationIntelligence;
+};
 
 interface ClinicalDecisionSupportProps {
   chiefComplaint: string;
@@ -80,10 +87,10 @@ export function ClinicalDecisionSupport({
   const [clinicalNotes, setClinicalNotes] = useState('');
   const [investigationRationale, setInvestigationRationale] = useState('');
   const [followUpPlan, setFollowUpPlan] = useState('');
-  const [investigationIntelligence, setInvestigationIntelligence] = useState<any[]>([]);
-  const [treatmentRecommendation, setTreatmentRecommendation] = useState<any>(null);
+  const [investigationIntelligence, setInvestigationIntelligence] = useState<EnrichedInvestigation[]>([]);
+  const [treatmentRecommendation, setTreatmentRecommendation] = useState<TreatmentRecommendation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [diagnoses, setDiagnoses] = useState<any[]>([]);
+  const [diagnoses, setDiagnoses] = useState<DifferentialDiagnosis[]>([]);
   const [labResults, setLabResults] = useState<Array<{ name: string, value: string, date: string }>>([]);
   const [newLabName, setNewLabName] = useState('');
   const [newLabValue, setNewLabValue] = useState('');
@@ -108,50 +115,7 @@ export function ClinicalDecisionSupport({
     state.rosData
   );
 
-  // INFINITE LOOP FIX 2: Convert the recommendations array to a string to safely check if it changed
-  const recommendationsJson = JSON.stringify(recommendations || []);
-
-  useEffect(() => {
-    // Only load clinical data if we actually have recommendations to process
-    if (recommendations && recommendations.length > 0) {
-      loadClinicalData();
-    } else if (!aiLoading) {
-      setLoading(false);
-    }
-  }, [recommendationsJson, aiLoading]); 
-
-  // Show "continue anyway" after 15 seconds of loading
-  useEffect(() => {
-    if (loading || aiLoading) {
-      const timer = setTimeout(() => setShowContinue(true), 15000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowContinue(false);
-    }
-  }, [loading, aiLoading]);
-
-  // Auto-save functionality
-  useEffect(() => {
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      if (selectedInvestigations.length > 0 || selectedMedications.length > 0 || clinicalNotes.trim()) {
-        handleAutoSave();
-      }
-    }, 3000);
-
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan, labResults]);
-
-  // === HELPER FUNCTIONS ===
-
-  const loadClinicalData = async () => {
+  const loadClinicalData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -182,7 +146,81 @@ export function ClinicalDecisionSupport({
     } finally {
       setLoading(false);
     }
-  };
+  }, [recommendations, chiefComplaint, state.answers, state.rosData, state.currentPatient]);
+
+  useEffect(() => {
+    // Only load clinical data if we actually have recommendations to process
+    if (recommendations && recommendations.length > 0) {
+      loadClinicalData();
+    } else if (!aiLoading) {
+      setLoading(false);
+    }
+  }, [recommendations, aiLoading, loadClinicalData]); 
+
+  // Show "continue anyway" after 15 seconds of loading
+  useEffect(() => {
+    if (loading || aiLoading) {
+      const timer = setTimeout(() => setShowContinue(true), 15000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContinue(false);
+    }
+  }, [loading, aiLoading]);
+
+  const calculateTotalCost = useCallback(() => {
+    return investigationIntelligence
+      .filter(item => selectedInvestigations.includes(item.investigation.id))
+      .reduce((total, item) => total + (item.intelligence.costBenefit.estimatedCost || 0), 0);
+  }, [investigationIntelligence, selectedInvestigations]);
+
+  const handleAutoSave = useCallback(async () => {
+    const clinicalPlan: ClinicalPlan = {
+      investigations: {
+        selected: selectedInvestigations,
+        rationale: investigationRationale,
+        estimatedCost: calculateTotalCost(),
+        results: labResults
+      },
+      treatment: {
+        medications: selectedMedications,
+        nonPharmacological: selectedNonPharm,
+        followUp: followUpPlan
+      },
+      clinicalNotes
+    };
+
+    if (state.currentAssessment) {
+      try {
+        await saveClinicalPlanMutation.mutateAsync({
+          assessmentId: state.currentAssessment.id,
+          clinicalPlan
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }
+  }, [selectedInvestigations, investigationRationale, calculateTotalCost, labResults, selectedMedications, selectedNonPharm, followUpPlan, clinicalNotes, state.currentAssessment, saveClinicalPlanMutation]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (selectedInvestigations.length > 0 || selectedMedications.length > 0 || clinicalNotes.trim()) {
+        handleAutoSave();
+      }
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [selectedInvestigations, selectedMedications, selectedNonPharm, clinicalNotes, investigationRationale, followUpPlan, labResults, handleAutoSave]);
+
+  // === HELPER FUNCTIONS ===
 
   const handleInvestigationToggle = (investigationId: string) => {
     setSelectedInvestigations(prev => 
@@ -206,12 +244,6 @@ export function ClinicalDecisionSupport({
         ? prev.filter(t => t !== treatment)
         : [...prev, treatment]
     );
-  };
-
-  const calculateTotalCost = () => {
-    return investigationIntelligence
-      .filter(item => selectedInvestigations.includes(item.investigation.id))
-      .reduce((total, item) => total + (item.intelligence.costBenefit.estimatedCost || 0), 0);
   };
 
   const handleAddLabResult = () => {
@@ -259,34 +291,6 @@ export function ClinicalDecisionSupport({
     
     setValidationErrors(errors);
     return errors.length === 0;
-  };
-
-  const handleAutoSave = async () => {
-    const clinicalPlan: ClinicalPlan = {
-      investigations: {
-        selected: selectedInvestigations,
-        rationale: investigationRationale,
-        estimatedCost: calculateTotalCost(),
-        results: labResults
-      },
-      treatment: {
-        medications: selectedMedications,
-        nonPharmacological: selectedNonPharm,
-        followUp: followUpPlan
-      },
-      clinicalNotes
-    };
-
-    if (state.currentAssessment) {
-      try {
-        await saveClinicalPlanMutation.mutateAsync({
-          assessmentId: state.currentAssessment.id,
-          clinicalPlan
-        });
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-      }
-    }
   };
 
   const handleSaveClinicalPlan = async () => {
@@ -615,7 +619,7 @@ export function ClinicalDecisionSupport({
                                 <Clock className="h-4 w-4 text-primary" />
                                 <span className="text-sm font-medium">Timing</span>
                               </div>
-                              <p className="text-sm font-semibold">{item.timing}</p>
+                              <p className="text-sm font-semibold capitalize">{item.investigation.urgency}</p>
                               <p className="text-xs text-muted-foreground">Priority {item.priority}</p>
                             </div>
                           </div>
@@ -634,7 +638,7 @@ export function ClinicalDecisionSupport({
                                 {item.intelligence.contraindications.contraindications.length > 0 && (
                                   <div className="mb-2">
                                     <p className="text-sm font-medium mb-1">Contraindications:</p>
-                                    {item.intelligence.contraindications.contraindications.map((contraindication: any, idx: number) => (
+                                    {item.intelligence.contraindications.contraindications.map((contraindication: Contraindication, idx: number) => (
                                       <p key={idx} className="text-sm flex items-center space-x-2">
                                         <Badge variant={contraindication.type === 'absolute' ? 'destructive' : 'secondary'} className="text-xs">
                                           {contraindication.type}
@@ -648,7 +652,7 @@ export function ClinicalDecisionSupport({
                                 {item.intelligence.contraindications.warnings.length > 0 && (
                                   <div className="mb-2">
                                     <p className="text-sm font-medium mb-1">Warnings:</p>
-                                    {item.intelligence.contraindications.warnings.map((warning: any, idx: number) => (
+                                    {item.intelligence.contraindications.warnings.map((warning: Warning, idx: number) => (
                                       <p key={idx} className="text-sm">• {warning.description}</p>
                                     ))}
                                   </div>
@@ -658,7 +662,7 @@ export function ClinicalDecisionSupport({
                                   <div>
                                     <p className="text-sm font-medium mb-1">Alternative Investigations:</p>
                                     <div className="flex flex-wrap gap-1">
-                                      {item.intelligence.contraindications.alternativeRecommendations.map((alt: any, idx: number) => (
+                                      {item.intelligence.contraindications.alternativeRecommendations.map((alt: string, idx: number) => (
                                         <Badge key={idx} variant="secondary" className="text-xs">
                                           {alt}
                                         </Badge>
@@ -771,7 +775,7 @@ export function ClinicalDecisionSupport({
                     </h3>
                     
                     <div className="space-y-4">
-                      {treatmentRecommendation.medicationSuggestions.map((medSuggestion: any, index: number) => (
+                      {treatmentRecommendation.medicationSuggestions.map((medSuggestion: MedicationSuggestion, index: number) => (
                         <Card key={index} className="border-l-4 border-l-secondary">
                           <CardContent className="p-4">
                             <div className="flex items-start space-x-4">

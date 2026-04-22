@@ -17,11 +17,11 @@ import { toast } from 'sonner';
 interface TestResult {
   name: string;
   status: 'success' | 'error' | 'warning';
-  result?: any;
+  result?: unknown;
   error?: string;
   duration: number;
   timestamp: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export function AIServiceTest() {
@@ -34,7 +34,7 @@ export function AIServiceTest() {
     setTestResults(prev => [...prev, result]);
   };
 
-  const runTest = async (testName: string, testFn: () => Promise<any>): Promise<any> => {
+  const runTest = async <T,>(testName: string, testFn: () => Promise<T>): Promise<T> => {
     const startTime = Date.now();
     try {
       const result = await testFn();
@@ -52,17 +52,18 @@ export function AIServiceTest() {
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(`Test failed: ${testName}`, error);
+      const err = error instanceof Error ? error : new Error(String(error));
       
       addTestResult({
         name: testName,
         status: 'error',
-        error: error.message,
+        error: err.message,
         duration,
         timestamp: new Date().toISOString(),
         details: {
-          stack: error.stack,
-          cause: error.cause,
-          name: error.name
+          stack: err.stack,
+          cause: (err as Error & { cause?: unknown }).cause,
+          name: err.name
         }
       });
       
@@ -92,7 +93,6 @@ export function AIServiceTest() {
         return {
           status: data?.status || 'unknown',
           version: data?.version || 'unknown',
-          openRouterConfigured: data?.environment?.hasOpenRouterKey || false,
           environment: data?.environment || {},
           keyStatus: data?.environment?.keyStatus || 'unknown'
         };
@@ -151,11 +151,11 @@ export function AIServiceTest() {
         setDetailedLogs(prev => prev + `Generated Questions: ${JSON.stringify(data.questions, null, 2)}\n\n`);
         
         // Validate question structure
-        const validQuestions = data.questions.filter((q: any) => 
+        const validQuestions = data.questions.filter((q: Record<string, unknown>) => 
           q.id && q.text && q.type && q.category
         );
         
-        const invalidQuestions = data.questions.filter((q: any) => 
+        const invalidQuestions = data.questions.filter((q: Record<string, unknown>) => 
           !q.id || !q.text || !q.type || !q.category
         );
         
@@ -167,9 +167,9 @@ export function AIServiceTest() {
           totalQuestions: data.questions.length,
           validQuestions: validQuestions.length,
           invalidQuestions: invalidQuestions.length,
-          questionsHaveUUIDs: data.questions.every((q: any) => {
+          questionsHaveUUIDs: data.questions.every((q: Record<string, unknown>) => {
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            return uuidRegex.test(q.id);
+            return typeof q.id === 'string' && uuidRegex.test(q.id);
           }),
           sampleQuestion: data.questions[0]?.text || 'No questions'
         };
@@ -202,7 +202,8 @@ export function AIServiceTest() {
 
     } catch (error) {
       console.error('Test suite error:', error);
-      setDetailedLogs(prev => prev + `=== Test Suite Error: ${error.message} ===\n`);
+      const err = error instanceof Error ? error : new Error(String(error));
+      setDetailedLogs(prev => prev + `=== Test Suite Error: ${err.message} ===\n`);
       toast.error('Some tests failed. Check results for details.');
     } finally {
       setLoading(false);
@@ -364,17 +365,17 @@ export function AIServiceTest() {
             <div>
               <strong>Most Common Issues:</strong>
               <ul className="mt-1 space-y-1 text-gray-600">
-                <li>🔑 OPENROUTER_API_KEY not configured or invalid</li>
-                <li>💳 OpenRouter account out of credits</li>
+                <li>🔑 GROQ_API_KEY not configured or invalid</li>
+                <li>💳 Groq account out of credits</li>
                 <li>🚫 API key doesn't have access to required models</li>
-                <li>⚠️ Rate limiting from OpenRouter</li>
+                <li>⚠️ Rate limiting from Groq</li>
                 <li>🌐 Network connectivity issues</li>
               </ul>
             </div>
             <div>
               <strong>Immediate Actions:</strong>
               <ul className="mt-1 space-y-1 text-gray-600">
-                <li>✅ Verify API key in OpenRouter dashboard</li>
+                <li>✅ Verify API key in Groq dashboard</li>
                 <li>💰 Check account credits and billing status</li>
                 <li>🔄 Try again if rate limited</li>
                 <li>📊 Check Supabase Edge Function logs</li>

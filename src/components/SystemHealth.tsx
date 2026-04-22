@@ -15,7 +15,7 @@ interface SystemStatus {
   database: 'healthy' | 'error' | 'checking';
   aiService: 'healthy' | 'error' | 'checking';
   edgeFunction: 'healthy' | 'error' | 'checking';
-  openRouterAPI: 'healthy' | 'error' | 'checking';
+  groqAPI: 'healthy' | 'error' | 'checking';
 }
 
 interface HealthCheckResult {
@@ -36,7 +36,7 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
     database: 'checking',
     aiService: 'checking',
     edgeFunction: 'checking',
-    openRouterAPI: 'checking'
+    groqAPI: 'checking'
   });
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [checking, setChecking] = useState(false);
@@ -101,26 +101,26 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
         responseTime
       });
 
-      // If edge function works, test OpenRouter integration
-      if (data?.openRouterConfigured) {
-        setStatus(prev => ({ ...prev, openRouterAPI: 'healthy' }));
+      // If edge function works, test Groq integration
+      if (data?.hasApiKey) {
+        setStatus(prev => ({ ...prev, groqAPI: 'healthy' }));
         results.push({
-          service: 'OpenRouter API',
+          service: 'Groq API',
           status: 'healthy',
-          message: 'OpenRouter API key is configured',
+          message: 'Groq API key is configured',
           details: 'API key is available in edge function environment'
         });
       } else {
-        setStatus(prev => ({ ...prev, openRouterAPI: 'error' }));
+        setStatus(prev => ({ ...prev, groqAPI: 'error' }));
         results.push({
-          service: 'OpenRouter API',
+          service: 'Groq API',
           status: 'error',
-          message: 'OpenRouter API key not configured',
+          message: 'Groq API key not configured',
           details: 'API key missing from edge function secrets',
           actionable: [
-            'Check OPENROUTER_API_KEY in Supabase secrets',
+            'Check GROQ_API_KEY in Supabase secrets',
             'Verify API key is valid and has credits',
-            'Test API key directly with OpenRouter'
+            'Test API key directly with Groq'
           ]
         });
       }
@@ -139,13 +139,13 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
         ]
       });
 
-      // Mark OpenRouter as unknown if edge function fails
-      setStatus(prev => ({ ...prev, openRouterAPI: 'error' }));
+      // Mark Groq as unknown if edge function fails
+      setStatus(prev => ({ ...prev, groqAPI: 'error' }));
       results.push({
-        service: 'OpenRouter API',
+        service: 'Groq API',
         status: 'error',
         message: 'Cannot test - edge function not responding',
-        details: 'OpenRouter API test requires working edge function'
+        details: 'Groq API test requires working edge function'
       });
     }
 
@@ -167,7 +167,7 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
             service: 'AI Service',
             status: 'healthy',
             message: `AI service operational. Generated ${testQuestions.length} valid questions.`,
-            details: 'OpenRouter API and question generation working correctly',
+            details: 'Groq API and question generation working correctly',
             responseTime
           });
           onAIServiceFixed?.();
@@ -184,13 +184,13 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
         service: 'AI Service',
         status: 'error',
         message: `AI service failed: ${error.message}`,
-        details: 'OpenRouter API or AI processing not working properly',
+        details: 'Groq API or AI processing not working properly',
         actionable: [
-          'Check OpenRouter API key validity',
-          'Verify OpenRouter account has sufficient credits',
+          'Check Groq API key validity',
+          'Verify Groq account has sufficient credits',
           'Test edge function logs for detailed errors',
-          'Check network connectivity to OpenRouter',
-          'Verify model availability (claude-3.5-sonnet)'
+          'Check network connectivity to Groq',
+          'Verify model availability (llama3-70b-8192)'
         ]
       });
     }
@@ -243,7 +243,7 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
         return <Brain className="h-4 w-4" />;
       case 'edge function':
         return <Zap className="h-4 w-4" />;
-      case 'openrouter api':
+      case 'groq api':
         return <Activity className="h-4 w-4" />;
       default:
         return <AlertTriangle className="h-4 w-4" />;

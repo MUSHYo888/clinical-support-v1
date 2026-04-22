@@ -1,7 +1,7 @@
 // ABOUTME: Advanced AI-powered differential diagnosis engine component
 // ABOUTME: Provides intelligent diagnostic reasoning with confidence scores and clinical recommendations
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,20 +77,18 @@ export function DifferentialDiagnosisEngine({
   const [activeTab, setActiveTab] = useState('diagnoses');
   const [hasAttempted, setHasAttempted] = useState(false);
 
-  useEffect(() => {
-    if (chiefComplaint && state.answers && Object.keys(state.answers).length > 0 && !hasAttempted) {
-      generateDifferentialDiagnosis();
-    }
-  }, [chiefComplaint, hasAttempted]);
-
-  const generateDifferentialDiagnosis = async () => {
+  const generateDifferentialDiagnosis = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       setHasAttempted(true);
       
 
-      let data;
+      let data: {
+        differentialDiagnoses?: DifferentialDiagnosis[];
+        clinicalRecommendations?: ClinicalRecommendations;
+        riskStratification?: RiskStratification;
+      } | null = null;
       let currentRetries = 3;
       let currentDelay = 1000;
       let success = false;
@@ -112,14 +110,22 @@ export function DifferentialDiagnosisEngine({
             }
           });
 
-          const result = await Promise.race([apiPromise, timeoutPromise]) as any;
+          const result = await Promise.race([apiPromise, timeoutPromise]) as {
+            data: {
+              differentialDiagnoses?: DifferentialDiagnosis[];
+              clinicalRecommendations?: ClinicalRecommendations;
+              riskStratification?: RiskStratification;
+              error?: string;
+            } | null;
+            error: Error | null;
+          };
           
           if (result.error) throw new Error(result.error.message);
           if (result.data?.error) throw new Error(result.data.error);
 
           data = result.data;
           success = true;
-        } catch (err: any) {
+        } catch (err) {
           if (currentRetries === 0) throw err;
           console.warn(`Differential Diagnosis AI failed, retrying in ${currentDelay}ms... (${currentRetries} retries left)`);
           await new Promise(resolve => setTimeout(resolve, currentDelay));
@@ -128,15 +134,15 @@ export function DifferentialDiagnosisEngine({
         }
       }
 
-      setDiagnoses(data.differentialDiagnoses || []);
-      setRecommendations(data.clinicalRecommendations);
-      setRiskStratification(data.riskStratification);
+      setDiagnoses(data?.differentialDiagnoses || []);
+      setRecommendations(data?.clinicalRecommendations || null);
+      setRiskStratification(data?.riskStratification || null);
 
       if (onDiagnosisGenerated) {
-        onDiagnosisGenerated(data.differentialDiagnoses || []);
+        onDiagnosisGenerated(data?.differentialDiagnoses || []);
       }
 
-      toast.success(`Generated ${data.differentialDiagnoses?.length || 0} differential diagnoses`);
+      toast.success(`Generated ${data?.differentialDiagnoses?.length || 0} differential diagnoses`);
 
     } catch (err) {
       console.error('Error generating differential diagnosis:', err);
@@ -169,9 +175,9 @@ export function DifferentialDiagnosisEngine({
         }
       };
 
-      setDiagnoses(fallbackData.differentialDiagnoses as any);
+      setDiagnoses(fallbackData.differentialDiagnoses as DifferentialDiagnosis[]);
       setRecommendations(fallbackData.clinicalRecommendations);
-      setRiskStratification(fallbackData.riskStratification as any);
+      setRiskStratification(fallbackData.riskStratification as RiskStratification);
 
       if (errorMessage.includes('timeout')) {
         toast.error('AI service is taking longer than expected. You can retry or continue with clinical protocols.');
@@ -181,7 +187,13 @@ export function DifferentialDiagnosisEngine({
     } finally {
       setLoading(false);
     }
-  };
+  }, [chiefComplaint, state.answers, state.rosData, state.pmhData, state.peData, assessmentId, onDiagnosisGenerated]);
+
+  useEffect(() => {
+    if (chiefComplaint && state.answers && Object.keys(state.answers).length > 0 && !hasAttempted) {
+      generateDifferentialDiagnosis();
+    }
+  }, [chiefComplaint, hasAttempted, state.answers, generateDifferentialDiagnosis]);
 
   const handleManualRetry = () => {
     setHasAttempted(false);

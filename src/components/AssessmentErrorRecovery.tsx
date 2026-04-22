@@ -69,7 +69,7 @@ export function AssessmentErrorRecovery({
     if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
       return 'network';
     }
-    if (errorMessage.toLowerCase().includes('ai') || errorMessage.toLowerCase().includes('openrouter')) {
+    if (errorMessage.toLowerCase().includes('ai') || errorMessage.toLowerCase().includes('groq')) {
       return 'ai';
     }
     if (errorMessage.toLowerCase().includes('database') || errorMessage.toLowerCase().includes('supabase')) {

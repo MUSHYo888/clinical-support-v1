@@ -1,6 +1,6 @@
 
 // ABOUTME: Dedicated differential diagnosis edge function with full clinical context
-// ABOUTME: Uses Lovable AI Gateway for comprehensive differential diagnosis generation and DB persistence
+// ABOUTME: Uses Groq API for comprehensive differential diagnosis generation and DB persistence
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -10,21 +10,59 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const AI_GATEWAY_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama3-70b-8192";
 
-serve(async (req) => {
+interface DifferentialDiagnosis {
+  condition: string;
+  probability: number;
+  explanation: string;
+  keyFeatures: string[];
+  conflictingFeatures?: string[];
+  urgency: string;
+  category: string;
+  redFlags?: string[];
+}
+
+interface ClinicalRecommendations {
+  immediateActions: string[];
+  redFlagAlert: boolean;
+  followUpRecommendations: string[];
+}
+
+interface RiskStratification {
+  overallRisk: string;
+  riskFactors: {
+    highUrgencyConditions: number;
+    redFlagConditions: number;
+    diagnosticConfidence: number;
+  };
+}
+
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  try {
+    const apiKey = Deno.env.get('GROQ_API_KEY');
+    if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     const { chiefComplaint, answers, rosData, pmhData, peData, assessmentId } = await req.json();
     console.log('[differential-diagnosis] Generating for:', chiefComplaint);
@@ -97,11 +135,11 @@ Physical Examination: ${JSON.stringify(clinicalContext.physicalExam)}`;
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    let differentialDiagnoses;
+    let differentialDiagnoses: DifferentialDiagnosis[];
     try {
       const match = content.match(/\[[\s\S]*\]/);
       if (!match) throw new Error('No JSON array in response');
-      differentialDiagnoses = JSON.parse(match[0]);
+      differentialDiagnoses = JSON.parse(match[0]) as DifferentialDiagnosis[];
     } catch {
       console.error('[differential-diagnosis] Parse failed, using fallback');
       differentialDiagnoses = generateFallbackDifferentials(chiefComplaint);
@@ -132,30 +170,30 @@ Physical Examination: ${JSON.stringify(clinicalContext.physicalExam)}`;
     });
 
   } catch (error) {
-    console.error('[differential-diagnosis] Error:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[differential-diagnosis] Error:', error);
+    return new Response(JSON.stringify({ error: 'An internal server error occurred while generating the differential diagnosis.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
 
-function extractPresentingSymptoms(answers: any): string[] {
+function extractPresentingSymptoms(answers: Record<string, { value?: unknown; notes?: string }>): string[] {
   const symptoms: string[] = [];
-  Object.values(answers || {}).forEach((answer: any) => {
-    if (answer.value && typeof answer.value === 'string') symptoms.push(answer.value);
-    if (answer.notes) symptoms.push(answer.notes);
+  Object.values(answers || {}).forEach((answer) => {
+    if (answer?.value && typeof answer.value === 'string') symptoms.push(answer.value);
+    if (answer?.notes) symptoms.push(answer.notes);
   });
   return symptoms.filter(s => s.length > 0);
 }
 
-function generateClinicalRecommendations(diagnoses: any[]): any {
+function generateClinicalRecommendations(diagnoses: DifferentialDiagnosis[]): ClinicalRecommendations {
   const urgentConditions = diagnoses.filter(d => d.urgency === 'high');
   return {
     immediateActions: urgentConditions.length > 0
       ? ['Consider urgent evaluation', 'Monitor vital signs', 'Ensure appropriate follow-up']
       : [],
-    redFlagAlert: diagnoses.some(d => d.redFlags?.length > 0),
+    redFlagAlert: diagnoses.some(d => (d.redFlags?.length || 0) > 0),
     followUpRecommendations: [
       'Re-evaluate if symptoms worsen',
       'Consider specialist referral if diagnosis uncertain',
@@ -164,9 +202,9 @@ function generateClinicalRecommendations(diagnoses: any[]): any {
   };
 }
 
-function calculateRiskStratification(diagnoses: any[]): any {
+function calculateRiskStratification(diagnoses: DifferentialDiagnosis[]): RiskStratification {
   const highRiskCount = diagnoses.filter(d => d.urgency === 'high').length;
-  const redFlagCount = diagnoses.filter(d => d.redFlags?.length > 0).length;
+  const redFlagCount = diagnoses.filter(d => (d.redFlags?.length || 0) > 0).length;
   const avgProb = diagnoses.reduce((sum, d) => sum + d.probability, 0) / (diagnoses.length || 1);
 
   let overallRisk = 'low';
@@ -176,8 +214,8 @@ function calculateRiskStratification(diagnoses: any[]): any {
   return { overallRisk, riskFactors: { highUrgencyConditions: highRiskCount, redFlagConditions: redFlagCount, diagnosticConfidence: Math.round(avgProb) } };
 }
 
-function generateFallbackDifferentials(chiefComplaint: string): any[] {
-  const fallbackMap: Record<string, any[]> = {
+function generateFallbackDifferentials(chiefComplaint: string): DifferentialDiagnosis[] {
+  const fallbackMap: Record<string, DifferentialDiagnosis[]> = {
     'chest pain': [{ condition: 'Coronary Artery Disease', probability: 65, explanation: 'Most common cause of chest pain in adults', keyFeatures: ['Exertional chest pain'], conflictingFeatures: [], urgency: 'high', category: 'cardiovascular', redFlags: ['Acute onset'] }],
     'shortness of breath': [{ condition: 'Asthma', probability: 55, explanation: 'Common reversible airway disease', keyFeatures: ['Wheezing'], conflictingFeatures: [], urgency: 'moderate', category: 'respiratory', redFlags: [] }],
   };

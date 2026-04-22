@@ -2,8 +2,8 @@
 // ABOUTME: Enhanced hook for investigation recommendations with fallback support
 // ABOUTME: Provides AI-powered recommendations with graceful degradation to clinical protocols
 
-import { useState, useEffect } from 'react';
-import { InvestigationRecommendation, RedFlag, ClinicalGuideline } from '@/types/medical';
+import { useState, useEffect, useCallback } from 'react';
+import { InvestigationRecommendation, RedFlag, ClinicalGuideline, DifferentialDiagnosis, Answer, ReviewOfSystems } from '@/types/medical';
 import { AIService } from '@/services/aiService';
 import { EnhancedInvestigationService } from '@/services/investigation/EnhancedInvestigationService';
 
@@ -18,9 +18,9 @@ interface UseInvestigationRecommendationsResult {
 
 export function useInvestigationRecommendations(
   chiefComplaint: string,
-  differentialDiagnoses: any[],
-  answers: Record<string, any>,
-  rosData: Record<string, any>
+  differentialDiagnoses: DifferentialDiagnosis[],
+  answers: Record<string, Answer>,
+  rosData: ReviewOfSystems
 ): UseInvestigationRecommendationsResult {
   const [recommendations, setRecommendations] = useState<InvestigationRecommendation[]>([]);
   const [redFlags, setRedFlags] = useState<RedFlag[]>([]);
@@ -28,7 +28,7 @@ export function useInvestigationRecommendations(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -73,13 +73,13 @@ export function useInvestigationRecommendations(
     } finally {
       setLoading(false);
     }
-  };
+  }, [chiefComplaint]); // answers/rosData/diagnoses are new object refs each render — only re-fetch when complaint changes
 
   useEffect(() => {
     if (chiefComplaint) {
       fetchRecommendations();
     }
-  }, [chiefComplaint]); // answers/rosData/diagnoses are new object refs each render — only re-fetch when complaint changes
+  }, [chiefComplaint, fetchRecommendations]);
 
   return {
     recommendations,
@@ -92,7 +92,7 @@ export function useInvestigationRecommendations(
 }
 
 // Helper functions for fallback recommendations
-function generateProtocolRedFlags(chiefComplaint: string, answers: Record<string, any>): RedFlag[] {
+function generateProtocolRedFlags(chiefComplaint: string, answers: Record<string, Answer>): RedFlag[] {
   const redFlags: RedFlag[] = [];
   const complaint = chiefComplaint.toLowerCase();
   

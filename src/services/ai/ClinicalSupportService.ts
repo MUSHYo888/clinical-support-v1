@@ -27,6 +27,7 @@ export class ClinicalSupportService {
         });
 
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         if (!data?.clinicalSupport) throw new Error('Invalid response from AI service');
 
         return data.clinicalSupport;

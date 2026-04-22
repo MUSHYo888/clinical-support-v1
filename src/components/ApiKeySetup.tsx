@@ -1,4 +1,4 @@
-// ABOUTME: API key setup component for configuring OpenRouter AI service
+// ABOUTME: API key setup component for configuring Groq AI service
 // ABOUTME: Provides interface for users to configure API keys when service fails
 
 import React, { useState } from 'react';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Key, ExternalLink, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApiKeySetupProps {
   onApiKeyConfigured: () => void;
@@ -26,9 +27,11 @@ export function ApiKeySetup({ onApiKeyConfigured, error }: ApiKeySetupProps) {
   const handleTestConnection = async () => {
     setIsConfiguring(true);
     try {
-      // Test the AI service by making a simple request
-      const response = await fetch('/api/test-ai-connection');
-      if (response.ok) {
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { action: 'health-check' }
+      });
+      
+      if (!error && data?.status === 'healthy') {
         onApiKeyConfigured();
       }
     } catch (err) {
@@ -58,19 +61,19 @@ export function ApiKeySetup({ onApiKeyConfigured, error }: ApiKeySetupProps) {
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium mb-2">OpenRouter API Configuration</h3>
+              <h3 className="text-lg font-medium mb-2">Groq API Configuration</h3>
               <p className="text-gray-600 text-sm mb-4">
-                The AI features require an OpenRouter API key to function. You'll need to configure this in your Supabase project settings.
+                The AI features require a Groq API key to function. You'll need to configure this in your Supabase project settings.
               </p>
             </div>
 
             <div className="bg-blue-50 p-4 rounded-lg space-y-3">
               <h4 className="font-medium text-blue-900">Setup Instructions:</h4>
               <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-                <li>Get an API key from <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" className="underline">OpenRouter.ai</a></li>
+                <li>Get an API key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="underline">Groq Console</a></li>
                 <li>Click the button below to open Supabase Edge Function secrets</li>
-                <li>Add a new secret with name: <code className="bg-white px-1 rounded">OPENROUTER_API_KEY</code></li>
-                <li>Paste your OpenRouter API key as the value</li>
+                <li>Add a new secret with name: <code className="bg-white px-1 rounded">GROQ_API_KEY</code></li>
+                <li>Paste your Groq API key as the value</li>
                 <li>Save the secret and return here to test the connection</li>
               </ol>
             </div>

@@ -1,16 +1,17 @@
 
 // ABOUTME: AI assistant edge function for clinical question generation, differential diagnosis, and clinical support
-// ABOUTME: Uses Lovable AI Gateway (OpenAI-compatible) with LOVABLE_API_KEY for all AI features
+// ABOUTME: Uses Groq API with GROQ_API_KEY for all AI features
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const AI_GATEWAY_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama3-70b-8192";
 
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -21,8 +22,8 @@ function generateUUID(): string {
 }
 
 async function callAI(systemPrompt: string, userPrompt: string, maxTokens = 2000): Promise<string> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
+  const apiKey = Deno.env.get('GROQ_API_KEY');
+  if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
 
   const response = await fetch(AI_GATEWAY_URL, {
     method: 'POST',
@@ -57,16 +58,48 @@ async function callAI(systemPrompt: string, userPrompt: string, maxTokens = 2000
   return data.choices[0].message.content;
 }
 
-function extractJSON(text: string, type: 'array' | 'object'): any {
+function extractJSON<T = unknown>(text: string, type: 'array' | 'object'): T {
   const pattern = type === 'array' ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/;
   const match = text.match(pattern);
   if (!match) throw new Error(`No JSON ${type} found in AI response`);
-  return JSON.parse(match[0]);
+  return JSON.parse(match[0]) as T;
 }
 
-serve(async (req) => {
+interface GeneratedQuestion {
+  id?: string;
+  text?: string;
+  type?: string;
+  options?: string[];
+  category?: string;
+  required?: boolean;
+}
+
+interface GeneratedDifferential {
+  condition: string;
+  probability: number;
+  explanation: string;
+  keyFeatures: string[];
+}
+
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -89,8 +122,8 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         service: 'ai-assistant',
         version: '3.0.0',
-        gateway: 'lovable-ai',
-        hasApiKey: !!Deno.env.get('LOVABLE_API_KEY'),
+        gateway: 'groq-ai',
+        hasApiKey: !!Deno.env.get('GROQ_API_KEY'),
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -129,10 +162,10 @@ ${Object.keys(previousAnswers).length > 0 ? `Previous answers: ${JSON.stringify(
 Generate focused clinical questions.`;
 
       const aiResponse = await callAI(systemPrompt, userPrompt, 2000);
-      let questions = extractJSON(aiResponse, 'array');
+      let questions = extractJSON<GeneratedQuestion[]>(aiResponse, 'array');
 
       // Validate and fix question IDs
-      questions = questions.map((q: any, i: number) => {
+      questions = questions.map((q) => {
         if (!q.id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(q.id)) {
           q.id = generateUUID();
         }
@@ -171,7 +204,7 @@ Review of Systems: ${JSON.stringify(rosData, null, 2)}
 Generate differential diagnoses.`;
 
       const aiResponse = await callAI(systemPrompt, userPrompt, 3000);
-      const differentials = extractJSON(aiResponse, 'array');
+      const differentials = extractJSON<GeneratedDifferential[]>(aiResponse, 'array');
 
       console.log(`[ai-assistant] Generated ${differentials.length} differentials`);
       return new Response(JSON.stringify({ differentials }), {
@@ -222,7 +255,7 @@ ${triggers}
 Generate targeted follow-up questions.`;
 
       const aiResponse = await callAI(systemPrompt, userPrompt, 2000);
-      let questions = extractJSON(aiResponse, 'array');
+      let questions = extractJSON<GeneratedQuestion[]>(aiResponse, 'array');
 
       questions = questions.slice(0, maxQuestions);
 
@@ -286,7 +319,7 @@ Review of Systems: ${JSON.stringify(rosData, null, 2)}
 Generate clinical decision support.`;
 
       const aiResponse = await callAI(systemPrompt, userPrompt, 4000);
-      const clinicalSupport = extractJSON(aiResponse, 'object');
+      const clinicalSupport = extractJSON<Record<string, unknown>>(aiResponse, 'object');
 
       console.log(`[ai-assistant] Generated clinical support`);
       return new Response(JSON.stringify({ clinicalSupport }), {
@@ -300,9 +333,9 @@ Generate clinical decision support.`;
     });
 
   } catch (error) {
-    console.error('[ai-assistant] Error:', error.message);
+    console.error('[ai-assistant] Error:', error);
     return new Response(JSON.stringify({
-      error: error.message || 'Internal server error',
+      error: 'An internal server error occurred while processing your request.',
       timestamp: new Date().toISOString(),
     }), {
       status: 500,

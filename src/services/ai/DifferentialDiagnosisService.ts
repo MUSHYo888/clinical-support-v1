@@ -16,9 +16,8 @@ export class DifferentialDiagnosisService {
     try {
       const result = await withRetry(async () => {
         
-        const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        const { data, error } = await supabase.functions.invoke('differential-diagnosis', {
           body: {
-            action: 'generate-differential',
             chiefComplaint,
             answers,
             rosData
@@ -26,9 +25,10 @@ export class DifferentialDiagnosisService {
         });
 
         if (error) throw error;
-        if (!data?.differentials) throw new Error('Invalid response from AI service');
+        if (data?.error) throw new Error(data.error);
+        if (!data?.differentialDiagnoses) throw new Error('Invalid response from AI service');
 
-        return data.differentials;
+        return data.differentialDiagnoses;
       }, 3, 1000);
 
       return result;

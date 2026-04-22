@@ -53,7 +53,7 @@ export function useSaveClinicalDecisionSupport() {
       toast.success('Clinical plan saved successfully');
       queryClient.invalidateQueries({ queryKey: ['clinical-decision-support'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to save clinical plan:', error);
       toast.error(`Failed to save clinical plan: ${error.message}`);
     }
