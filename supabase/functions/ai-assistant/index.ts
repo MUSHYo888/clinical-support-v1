@@ -186,17 +186,28 @@ Generate focused clinical questions.`;
 
       const systemPrompt = `You are a clinical AI assistant generating differential diagnoses. Analyze the patient presentation and provide the most likely diagnoses with clinical reasoning.
 
-Return ONLY a valid JSON array:
-[
-  {
-    "condition": "Condition name",
-    "probability": 85,
-    "explanation": "Clinical reasoning",
-    "keyFeatures": ["Feature 1", "Feature 2"]
-  }
-]
+You must extract 3-5 pertinent negatives from the HPI/ROS.
+Draft a complete, formal SOAP note based on the provided clinical data.
+For each diagnosis, you must provide a real-world, evidence-based guideline citation.
+Instead of generic investigations, provide actionable, STAT order sets (CPOE style).
 
-Provide 3-5 differentials ranked by likelihood (probability 1-100). Include common and serious conditions. Return ONLY the JSON array.`;
+Return ONLY a valid JSON object:
+{
+  "pertinentNegatives": ["negative 1", "negative 2"],
+  "soapNote": "S: ...\\nO: ...\\nA: ...\\nP: ...",
+  "differentialDiagnoses": [
+    {
+      "condition": "Condition name",
+      "probability": 85,
+      "explanation": "Clinical reasoning",
+      "keyFeatures": ["Feature 1", "Feature 2"],
+      "guidelineCitation": "2021 AHA/ACC Guidelines",
+      "statOrders": ["STAT 12-lead ECG", "High-sensitivity Troponin"]
+    }
+  ]
+}
+
+Provide 3-5 differentials ranked by likelihood (probability 1-100). Include common and serious conditions. Return ONLY the JSON object.`;
 
       const userPrompt = `Chief complaint: ${chiefComplaint}
 Patient answers: ${JSON.stringify(answers, null, 2)}
@@ -204,10 +215,15 @@ Review of Systems: ${JSON.stringify(rosData, null, 2)}
 Generate differential diagnoses.`;
 
       const aiResponse = await callAI(systemPrompt, userPrompt, 3000);
-      const differentials = extractJSON<GeneratedDifferential[]>(aiResponse, 'array');
+      const parsedObject = extractJSON(aiResponse, 'object');
+      const differentials = parsedObject.differentialDiagnoses || [];
 
       console.log(`[ai-assistant] Generated ${differentials.length} differentials`);
-      return new Response(JSON.stringify({ differentials }), {
+      return new Response(JSON.stringify({ 
+        differentials, 
+        pertinentNegatives: parsedObject.pertinentNegatives || [],
+        soapNote: parsedObject.soapNote || ''
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

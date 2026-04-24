@@ -145,7 +145,7 @@ export class FallbackDataService {
   }
 
   static getFallbackDifferentials(chiefComplaint: string): DifferentialDiagnosis[] {
-    const mockDiagnoses: Record<string, DifferentialDiagnosis[]> = {
+    const mockDiagnoses: Record<string, any[]> = {
       'headache': [
         {
           condition: 'Subarachnoid Hemorrhage',
@@ -227,7 +227,12 @@ export class FallbackDataService {
       diagnoses = matchingKey ? mockDiagnoses[matchingKey] : null;
     }
 
-    return diagnoses || mockDiagnoses['fatigue']; // Default to systemic
+    const results = diagnoses || mockDiagnoses['fatigue']; // Default to systemic
+    return results.map((d: any) => ({
+      ...d,
+      guidelineCitation: 'Standard Clinical Guidelines',
+      statOrders: ['Clinical evaluation', 'Vital signs monitoring']
+    })) as DifferentialDiagnosis[];
   }
 
   static getFallbackInvestigations(chiefComplaint: string): InvestigationRecommendation[] {

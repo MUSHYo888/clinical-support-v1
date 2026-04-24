@@ -22,6 +22,8 @@ interface DifferentialDiagnosis {
   urgency: string;
   category: string;
   redFlags?: string[];
+  guidelineCitation?: string;
+  statOrders?: string[];
 }
 
 interface ClinicalRecommendations {
@@ -77,21 +79,32 @@ serve(async (req: Request) => {
 
     const systemPrompt = `You are an expert clinical diagnostician. Analyze the clinical presentation and generate a comprehensive differential diagnosis list.
 
-Return ONLY a valid JSON array:
-[
-  {
-    "condition": "Condition Name",
-    "probability": 85,
-    "explanation": "Clinical reasoning",
-    "keyFeatures": ["Supporting feature 1"],
-    "conflictingFeatures": ["Feature against"],
-    "urgency": "high",
-    "category": "cardiovascular",
-    "redFlags": ["Red flag 1"]
-  }
-]
+You must extract 3-5 pertinent negatives from the HPI/ROS.
+Draft a complete, formal SOAP note based on the provided clinical data.
+For each diagnosis, you must provide a real-world, evidence-based guideline citation.
+Instead of generic investigations, provide actionable, STAT order sets (CPOE style).
 
-Generate 5-8 diagnoses ranked by probability (0-100). Include common and serious conditions. Return ONLY the JSON array.`;
+Return ONLY a valid JSON object:
+{
+  "pertinentNegatives": ["negative 1", "negative 2"],
+  "soapNote": "S: ...\\nO: ...\\nA: ...\\nP: ...",
+  "differentialDiagnoses": [
+    {
+      "condition": "Condition Name",
+      "probability": 85,
+      "explanation": "Clinical reasoning",
+      "keyFeatures": ["Supporting feature 1"],
+      "conflictingFeatures": ["Feature against"],
+      "urgency": "high",
+      "category": "cardiovascular",
+      "redFlags": ["Red flag 1"],
+      "guidelineCitation": "2021 AHA/ACC Guidelines",
+      "statOrders": ["STAT 12-lead ECG", "High-sensitivity Troponin"]
+    }
+  ]
+}
+
+Generate 5-8 diagnoses ranked by probability (0-100). Include common and serious conditions. Return ONLY the JSON object.`;
 
     const userPrompt = `Chief Complaint: ${clinicalContext.chiefComplaint}
 Presenting Symptoms: ${JSON.stringify(clinicalContext.presentingSymptoms)}
@@ -163,6 +176,8 @@ Physical Examination: ${JSON.stringify(clinicalContext.physicalExam)}`;
 
     return new Response(JSON.stringify({
       differentialDiagnoses,
+      pertinentNegatives,
+      soapNote,
       clinicalRecommendations: generateClinicalRecommendations(differentialDiagnoses),
       riskStratification: calculateRiskStratification(differentialDiagnoses),
     }), {
@@ -216,9 +231,9 @@ function calculateRiskStratification(diagnoses: DifferentialDiagnosis[]): RiskSt
 
 function generateFallbackDifferentials(chiefComplaint: string): DifferentialDiagnosis[] {
   const fallbackMap: Record<string, DifferentialDiagnosis[]> = {
-    'chest pain': [{ condition: 'Coronary Artery Disease', probability: 65, explanation: 'Most common cause of chest pain in adults', keyFeatures: ['Exertional chest pain'], conflictingFeatures: [], urgency: 'high', category: 'cardiovascular', redFlags: ['Acute onset'] }],
-    'shortness of breath': [{ condition: 'Asthma', probability: 55, explanation: 'Common reversible airway disease', keyFeatures: ['Wheezing'], conflictingFeatures: [], urgency: 'moderate', category: 'respiratory', redFlags: [] }],
+    'chest pain': [{ condition: 'Coronary Artery Disease', probability: 65, explanation: 'Most common cause of chest pain in adults', keyFeatures: ['Exertional chest pain'], conflictingFeatures: [], urgency: 'high', category: 'cardiovascular', redFlags: ['Acute onset'], guidelineCitation: '2021 AHA/ACC Guidelines', statOrders: ['STAT ECG', 'High-sensitivity Troponin'] }],
+    'shortness of breath': [{ condition: 'Asthma', probability: 55, explanation: 'Common reversible airway disease', keyFeatures: ['Wheezing'], conflictingFeatures: [], urgency: 'moderate', category: 'respiratory', redFlags: [], guidelineCitation: 'GINA Guidelines', statOrders: ['Peak Flow', 'Spirometry'] }],
   };
   const key = Object.keys(fallbackMap).find(k => chiefComplaint.toLowerCase().includes(k));
-  return key ? fallbackMap[key] : [{ condition: 'Clinical Assessment Required', probability: 50, explanation: 'Further evaluation needed', keyFeatures: ['Presenting symptoms require evaluation'], conflictingFeatures: [], urgency: 'moderate', category: 'general', redFlags: [] }];
+  return key ? fallbackMap[key] : [{ condition: 'Clinical Assessment Required', probability: 50, explanation: 'Further evaluation needed', keyFeatures: ['Presenting symptoms require evaluation'], conflictingFeatures: [], urgency: 'moderate', category: 'general', redFlags: [], guidelineCitation: 'Standard Care Protocol', statOrders: ['Vitals', 'Clinical Evaluation'] }];
 }

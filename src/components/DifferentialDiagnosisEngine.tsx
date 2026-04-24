@@ -35,6 +35,8 @@ interface DifferentialDiagnosis {
   urgency: 'high' | 'moderate' | 'low';
   category: string;
   redFlags: string[];
+  guidelineCitation?: string;
+  statOrders?: string[];
 }
 
 interface ClinicalRecommendations {

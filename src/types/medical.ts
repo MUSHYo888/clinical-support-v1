@@ -52,6 +52,14 @@ export interface DifferentialDiagnosis {
   probability: number;
   explanation: string;
   keyFeatures: string[];
+  guidelineCitation?: string;
+  statOrders?: string[];
+}
+
+export interface DDxResponse {
+  pertinentNegatives: string[];
+  soapNote: string;
+  differentialDiagnoses: DifferentialDiagnosis[];
 }
 
 export interface ClinicalSummary {

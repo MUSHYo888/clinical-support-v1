@@ -1,7 +1,7 @@
 // ABOUTME: Main AI service orchestrator for clinical AI features with enhanced error handling
 // ABOUTME: Coordinates specialized AI services and provides unified interface with fallback mechanisms
 
-import { Question, DifferentialDiagnosis } from '@/types/medical';
+import { Question, DifferentialDiagnosis, DDxResponse } from '@/types/medical';
 import { AdvancedClinicalSupport } from '@/types/clinical-scores';
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
 import { FallbackDataService } from './fallback/FallbackDataService';
@@ -95,11 +95,15 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
     chiefComplaint: string,
     answers: Record<string, any>,
     rosData?: Record<string, any>
-  ): Promise<DifferentialDiagnosis[]> {
+  ): Promise<DDxResponse> {
     try {
       const systemPrompt = `You are an expert clinical diagnostician. Analyze the clinical presentation and generate a comprehensive differential diagnosis list.
-      Return ONLY a valid JSON object with a "differentials" array matching this exact structure:
-      { "differentials": [ { "condition": "Condition Name", "probability": 85, "explanation": "Clinical reasoning", "keyFeatures": ["Supporting feature 1"], "conflictingFeatures": ["Feature against"], "urgency": "high", "category": "cardiovascular", "redFlags": ["Red flag 1"] } ] }
+      You must extract 3-5 pertinent negatives from the HPI/ROS.
+      Draft a complete, formal SOAP note based on the provided clinical data.
+      For each diagnosis, you must provide a real-world, evidence-based guideline citation.
+      Instead of generic investigations, provide actionable, STAT order sets (CPOE style).
+      Return ONLY a valid JSON object matching this exact structure:
+      { "pertinentNegatives": ["negative 1"], "soapNote": "S: ...", "differentials": [ { "condition": "Condition Name", "probability": 85, "explanation": "Clinical reasoning", "keyFeatures": ["Supporting feature 1"], "conflictingFeatures": ["Feature against"], "urgency": "high", "category": "cardiovascular", "redFlags": ["Red flag 1"], "guidelineCitation": "2021 AHA/ACC", "statOrders": ["STAT ECG"] } ] }
       Generate 5-8 diagnoses ranked by probability (0-100). Include common and serious conditions.`;
 
       const userPrompt = `Chief Complaint: ${chiefComplaint}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
@@ -107,11 +111,19 @@ private static logAICall(service: string, chiefComplaint: string, success: boole
       const result = await this.callGroq(systemPrompt, userPrompt);
 
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, true);
-      return result.differentials || [];
+      return {
+        differentialDiagnoses: result.differentials || [],
+        pertinentNegatives: result.pertinentNegatives || [],
+        soapNote: result.soapNote || ''
+      };
     } catch (error) {
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, false, error);
       
-      return FallbackDataService.getFallbackDifferentials(chiefComplaint);
+      return {
+        differentialDiagnoses: FallbackDataService.getFallbackDifferentials(chiefComplaint),
+        pertinentNegatives: [],
+        soapNote: ''
+      };
     }
   }
 

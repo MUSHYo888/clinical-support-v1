@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AuthPage } from "@/components/auth/AuthPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Sandbox from "./pages/Sandbox";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,8 @@ const App = () => (
                   <Index />
                 </ProtectedRoute>
               } />
+              {/* Public UI Sandbox route - MUST be placed before the catch-all 404 */}
+              <Route path="/sandbox" element={<Sandbox />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
