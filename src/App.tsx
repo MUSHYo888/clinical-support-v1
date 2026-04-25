@@ -9,8 +9,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Sandbox from "./pages/Sandbox";
 import WelcomeSandbox from "./pages/WelcomeSandbox";
+import Intake from "./pages/Intake";
+import NewMedicalDashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -26,11 +27,19 @@ const App = () => (
               <Route path="/auth" element={<WelcomeSandbox />} />
               <Route path="/" element={
                 <ProtectedRoute>
+                  <NewMedicalDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/intake" element={
+                <ProtectedRoute>
+                  <Intake />
+                </ProtectedRoute>
+              } />
+              <Route path="/workflow" element={
+                <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>
               } />
-              {/* Public UI Sandbox route - MUST be placed before the catch-all 404 */}
-              <Route path="/sandbox" element={<Sandbox />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

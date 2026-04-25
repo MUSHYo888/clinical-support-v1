@@ -11,7 +11,7 @@ import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { SystemHealth } from './SystemHealth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardProps {
   onNewPatient: () => void;
