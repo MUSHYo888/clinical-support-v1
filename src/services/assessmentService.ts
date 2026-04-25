@@ -51,10 +51,14 @@ export class AssessmentService {
     }
   }
 
-  static async completeAssessment(assessmentId: string): Promise<void> {
+  static async completeAssessment(assessmentId: string, aiAnalysisPayload?: any): Promise<void> {
+    const updateData: any = { status: 'completed' };
+    if (aiAnalysisPayload) {
+      updateData.ai_analysis = aiAnalysisPayload;
+    }
     const { error } = await supabase
       .from('assessments')
-      .update({ status: 'completed' })
+      .update(updateData)
       .eq('id', assessmentId);
 
     if (error) {

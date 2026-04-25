@@ -1,4 +1,3 @@
-
 // ABOUTME: React Query hook for assessment workflow management
 // ABOUTME: Handles assessment creation, updates, and data persistence
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -116,8 +115,8 @@ export function useCompleteAssessment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (assessmentId: string) => AssessmentService.completeAssessment(assessmentId),
-    onSuccess: (_, assessmentId) => {
+    mutationFn: ({ assessmentId, payload }: { assessmentId: string; payload?: any }) => AssessmentService.completeAssessment(assessmentId, payload),
+    onSuccess: (_, { assessmentId }) => {
       toast.success('Assessment completed successfully');
       queryClient.invalidateQueries({ queryKey: ['assessment', assessmentId] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });

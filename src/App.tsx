@@ -7,10 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MedicalProvider } from "@/context/MedicalContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AuthPage } from "@/components/auth/AuthPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Sandbox from "./pages/Sandbox";
+import WelcomeSandbox from "./pages/WelcomeSandbox";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +23,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/auth" element={<WelcomeSandbox />} />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />

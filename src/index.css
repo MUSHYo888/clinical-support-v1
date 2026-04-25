@@ -332,3 +332,15 @@
     transform: scale(1);
   }
 }
+
+@layer components {
+  .animate-reveal {
+    opacity: 0;
+    animation: pulseIn 0.8s ease-out forwards;
+  }
+}
+
+@keyframes pulseIn {
+  0% { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(5px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}

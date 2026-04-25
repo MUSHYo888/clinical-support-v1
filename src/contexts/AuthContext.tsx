@@ -4,7 +4,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -12,7 +11,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,12 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Check your email for the confirmation link');
-    }
-    
     return { error };
   };
 
@@ -68,22 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password
     });
     
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Successfully signed in');
-    }
-    
     return { error };
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Successfully signed out');
-    }
+    return { error };
   };
 
   const value = {
