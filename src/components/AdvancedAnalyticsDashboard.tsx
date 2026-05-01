@@ -9,23 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area
-} from 'recharts';
-import {
   BarChart3,
   TrendingUp,
   TrendingDown,
@@ -82,6 +65,7 @@ export function AdvancedAnalyticsDashboard() {
   const [clinicalInsights, setClinicalInsights] = useState<ClinicalInsight[]>([]);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [Recharts, setRecharts] = useState<any>(null);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -112,6 +96,12 @@ export function AdvancedAnalyticsDashboard() {
     }
   };
 
+  useEffect(() => {
+    if ((activeTab === 'performance' || activeTab === 'outcomes') && !Recharts) {
+      import('recharts').then(mod => setRecharts(mod));
+    }
+  }, [activeTab, Recharts]);
+
   const exportAnalytics = async () => {
     try {
       await AdvancedAnalyticsService.exportAnalyticsReport(timeRange);
@@ -130,6 +120,24 @@ export function AdvancedAnalyticsDashboard() {
       isSignificant: Math.abs(change) > 5
     };
   };
+
+  const {
+    BarChart,
+    Bar,
+    LineChart,
+    Line,
+    PieChart,
+    Pie,
+    Cell,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    AreaChart,
+    Area
+  } = (Recharts || {}) as any;
 
   const outcomeColors = {
     improved: '#22c55e',
@@ -320,6 +328,11 @@ export function AdvancedAnalyticsDashboard() {
 
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-6">
+          {!Recharts ? (
+            <div className="flex h-[300px] items-center justify-center">
+              <BarChart3 className="h-8 w-8 animate-pulse text-primary" />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -405,6 +418,7 @@ export function AdvancedAnalyticsDashboard() {
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         {/* Patient Outcomes Tab */}
@@ -415,6 +429,11 @@ export function AdvancedAnalyticsDashboard() {
                 <CardTitle>Outcome Distribution</CardTitle>
               </CardHeader>
               <CardContent>
+                {!Recharts ? (
+                  <div className="flex h-[300px] items-center justify-center">
+                    <BarChart3 className="h-8 w-8 animate-pulse text-primary" />
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -443,6 +462,7 @@ export function AdvancedAnalyticsDashboard() {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 

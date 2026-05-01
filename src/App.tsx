@@ -49,7 +49,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-          <footer className="app-footer">Clinical Decision Support - v1.0</footer>
+          <footer className="text-center p-4 text-sm text-muted-foreground">Clinical Decision Support - v1.0</footer>
         </MedicalProvider>
       </AuthProvider>
     </TooltipProvider>

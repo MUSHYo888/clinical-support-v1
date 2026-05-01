@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, UserPlus, Calendar, FileText, Activity } from 'lucide-react';
 import { Patient } from '@/types/medical';
 import { usePatients } from '@/hooks/usePatients';
-import { format } from 'date-fns';
 
 interface PatientListProps {
   onNewPatient: () => void;
@@ -38,6 +37,14 @@ export function PatientList({ onNewPatient, onSelectPatient, onBack }: PatientLi
     if (daysSince <= 7) return 'bg-blue-500';
     if (daysSince <= 30) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('en-US', { 
+      month: 'short', 
+      day: '2-digit', 
+      year: 'numeric' 
+    }).format(new Date(dateString));
   };
 
   if (isLoading) {
@@ -152,7 +159,7 @@ export function PatientList({ onNewPatient, onSelectPatient, onBack }: PatientLi
                             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                             <span className="text-xs sm:text-sm text-muted-foreground">
                               {patient.lastAssessment 
-                                ? format(new Date(patient.lastAssessment), 'MMM dd, yyyy')
+                                ? formatDate(patient.lastAssessment)
                                 : 'Never'
                               }
                             </span>

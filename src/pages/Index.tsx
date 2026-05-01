@@ -6,14 +6,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
-import { AdvancedAnalyticsDashboard } from '@/components/AdvancedAnalyticsDashboard';
 import { NewPatientForm } from '@/components/NewPatientForm';
 import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
-import { AssessmentWorkflow } from '@/components/AssessmentWorkflow';
 import { PatientList } from '@/components/PatientList';
 import { AssessmentResume } from '@/components/AssessmentResume';
 import { AssessmentErrorRecovery } from '@/components/AssessmentErrorRecovery';
-import { AIServiceTest } from '@/components/AIServiceTest';
 import { Patient, Assessment } from '@/types/medical';
 import { useMedical } from '@/context/MedicalContext';
 import { useCreateAssessment, useUpdateAssessmentStep, useAssessment } from '@/hooks/useAssessment';
@@ -21,6 +18,11 @@ import { useUpdatePatientAssessment } from '@/hooks/usePatients';
 import { AssessmentService } from '@/services/assessmentService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+
+const AdvancedAnalyticsDashboard = React.lazy(() => import('@/components/AdvancedAnalyticsDashboard').then(m => ({ default: m.AdvancedAnalyticsDashboard })));
+const AIServiceTest = React.lazy(() => import('@/components/AIServiceTest').then(m => ({ default: m.AIServiceTest })));
+const AssessmentWorkflow = React.lazy(() => import('@/components/AssessmentWorkflow').then(m => ({ default: m.AssessmentWorkflow })));
 
 type AppState = 'dashboard' | 'new-patient' | 'chief-complaint' | 'assessment' | 'patients' | 'summary' | 'resume-assessment' | 'error-recovery' | 'ai-testing' | 'analytics';
 
@@ -44,7 +46,7 @@ const Index = () => {
   useEffect(() => {
     const checkActiveSession = async () => {
       try {
-        const savedAssessmentId = localStorage.getItem(SESSION_KEYS.assessmentId);
+        const savedAssessmentId = localStorage.getItem(SESSION_KEYS.ASSESSMENT_ID);
         if (!savedAssessmentId) {
           setSessionChecked(true);
           return;
@@ -54,13 +56,13 @@ const Index = () => {
           .from('assessments')
           .select('*, patients!inner(*)')
           .eq('id', savedAssessmentId)
-          .eq('status', 'in-progress')
+          .eq('status', ASSESSMENT_STATUS.IN_PROGRESS)
           .single();
 
         if (error || !assessment) {
           // Clear stale session
-          localStorage.removeItem(SESSION_KEYS.assessmentId);
-          localStorage.removeItem(SESSION_KEYS.patientId);
+          localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
+          localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
           setSessionChecked(true);
           return;
         }
@@ -85,7 +87,7 @@ const Index = () => {
             id: assessment.id,
             patientId: assessment.patient_id,
             chiefComplaint: assessment.chief_complaint,
-            status: assessment.status as 'in-progress' | 'completed' | 'draft',
+          status: assessment.status as any,
             currentStep: assessment.current_step,
             createdAt: assessment.created_at,
             updatedAt: assessment.updated_at,
@@ -108,8 +110,8 @@ const Index = () => {
         toast.info('Resumed your in-progress assessment');
       } catch (err) {
         console.error('Failed to restore session:', err);
-        localStorage.removeItem(SESSION_KEYS.assessmentId);
-        localStorage.removeItem(SESSION_KEYS.patientId);
+        localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
+        localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
       } finally {
         setSessionChecked(true);
       }
@@ -169,8 +171,8 @@ const Index = () => {
       dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment });
 
       // Persist active session
-      localStorage.setItem(SESSION_KEYS.assessmentId, assessment.id);
-      localStorage.setItem(SESSION_KEYS.patientId, state.currentPatient.id);
+      localStorage.setItem(SESSION_KEYS.ASSESSMENT_ID, assessment.id);
+      localStorage.setItem(SESSION_KEYS.PATIENT_ID, state.currentPatient.id);
 
       setCurrentView('assessment');
       toast.success('Assessment started successfully');
@@ -183,8 +185,8 @@ const Index = () => {
   const handleAssessmentComplete = () => {
     try {
       // Clear active session
-      localStorage.removeItem(SESSION_KEYS.assessmentId);
-      localStorage.removeItem(SESSION_KEYS.patientId);
+      localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
+      localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
       setCurrentView('summary');
       toast.success('Assessment completed!');
     } catch (error) {
@@ -195,8 +197,8 @@ const Index = () => {
   const handleBackToDashboard = () => {
     try {
       dispatch({ type: 'RESET_ASSESSMENT' });
-      localStorage.removeItem(SESSION_KEYS.assessmentId);
-      localStorage.removeItem(SESSION_KEYS.patientId);
+      localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
+      localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
       setCurrentView('dashboard');
       setSelectedComplaint('');
       setGlobalError(null);
@@ -236,7 +238,7 @@ const Index = () => {
           id: assessment.id,
           patientId: assessment.patient_id,
           chiefComplaint: assessment.chief_complaint,
-          status: assessment.status as 'in-progress' | 'completed' | 'draft',
+          status: assessment.status as any,
           currentStep: assessment.current_step,
           createdAt: assessment.created_at,
           updatedAt: assessment.updated_at
@@ -307,6 +309,7 @@ const Index = () => {
       <Header />
       
       <main className="min-h-[calc(100vh-80px)]">
+        <React.Suspense fallback={<div className="flex h-full min-h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
         {currentView === 'dashboard' && (
           <Dashboard 
             onNewPatient={handleNewPatient}
@@ -404,6 +407,7 @@ const Index = () => {
             </div>
           </div>
         )}
+        </React.Suspense>
       </main>
     </div>
   );

@@ -557,7 +557,7 @@ export function ClinicalDecisionSupport({
                   Investigation Recommendations
                 </h3>
                 <Badge variant="outline">
-                  {selectedInvestigations.length} selected | Est. ${calculateTotalCost()}
+                {selectedInvestigations.length} selected | Est. ${totalCost}
                 </Badge>
               </div>
 
@@ -864,7 +864,7 @@ export function ClinicalDecisionSupport({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium">Investigations ({selectedInvestigations.length})</p>
-                  <p className="text-muted-foreground">Est. Cost: ${calculateTotalCost()}</p>
+              <p className="text-muted-foreground">Est. Cost: ${totalCost}</p>
                 </div>
                 <div>
                   <p className="font-medium">Treatment Plan</p>

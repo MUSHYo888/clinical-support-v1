@@ -4,6 +4,7 @@
 import { Question, Answer } from '@/types/medical';
 import { AnswerAnalysisService, AnswerAnalysis } from './AnswerAnalysisService';
 import { supabase } from '@/integrations/supabase/client';
+import { ClinicalUtils } from '@/utils/clinicalUtils';
 
 export class AdaptiveQuestionGeneratorService {
   
@@ -65,7 +66,7 @@ export class AdaptiveQuestionGeneratorService {
     }
 
     return data.questions.map((q: any, index: number) => ({
-      id: this.generateUUID(),
+      id: ClinicalUtils.generateUUID(),
       text: q.text,
       type: q.type || 'multiple-choice-with-text',
       options: q.options || this.getDefaultOptions(q.category),
@@ -90,7 +91,7 @@ export class AdaptiveQuestionGeneratorService {
     // High-priority questions based on red flags
     if (answerAnalysis.riskLevel === 'critical' || answerAnalysis.riskLevel === 'high') {
       questions.push({
-        id: this.generateUUID(),
+        id: ClinicalUtils.generateUUID(),
         text: 'Are you experiencing any of these serious symptoms right now?',
         type: 'multiple-choice-with-text',
         options: [
@@ -120,7 +121,7 @@ export class AdaptiveQuestionGeneratorService {
     // Pain-specific follow-up questions
     if (chiefComplaint.match(/pain/i) && questions.length < 5) {
       questions.push({
-        id: this.generateUUID(),
+        id: ClinicalUtils.generateUUID(),
         text: 'Have you tried any pain medications, and what was their effect?',
         type: 'multiple-choice-with-text',
         options: [
@@ -140,7 +141,7 @@ export class AdaptiveQuestionGeneratorService {
     // Medical history screening for concerning cases
     if (answerAnalysis.riskLevel !== 'low' && questions.length < 5) {
       questions.push({
-        id: this.generateUUID(),
+        id: ClinicalUtils.generateUUID(),
         text: 'Do you have any significant past medical history or current medications?',
         type: 'multiple-choice-with-text',
         options: [
@@ -159,7 +160,7 @@ export class AdaptiveQuestionGeneratorService {
     // Ensure we have at least 2-3 questions for comprehensive assessment
     if (questions.length < 2) {
       questions.push({
-        id: this.generateUUID(),
+        id: ClinicalUtils.generateUUID(),
         text: 'Is there anything else about your symptoms that you think is important?',
         type: 'text',
         category: 'additional_concerns',
@@ -177,7 +178,7 @@ export class AdaptiveQuestionGeneratorService {
 
   private static createQuestionFromTrigger(trigger: any, chiefComplaint: string): Question | null {
     const baseQuestion = {
-      id: this.generateUUID(),
+      id: ClinicalUtils.generateUUID(),
       phase: 2 as const,
       required: trigger.priority <= 2,
       clinicalPriority: trigger.priority,
@@ -233,13 +234,5 @@ export class AdaptiveQuestionGeneratorService {
     };
     
     return defaultOptionSets[category] || ['Yes', 'No', 'Unsure', 'Not applicable'];
-  }
-
-  private static generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
   }
 }

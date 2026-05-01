@@ -32,7 +32,7 @@ export class AssessmentService {
       .insert({
         patient_id: patientId,
         chief_complaint: chiefComplaint,
-        status: 'in-progress',
+        status: ASSESSMENT_STATUS.IN_PROGRESS,
         current_step: 1
       })
       .select()
@@ -47,7 +47,7 @@ export class AssessmentService {
       id: data.id,
       patientId: data.patient_id,
       chiefComplaint: data.chief_complaint,
-      status: data.status as 'in-progress' | 'completed' | 'draft',
+      status: data.status as any,
       currentStep: data.current_step,
       createdAt: data.created_at,
       updatedAt: data.updated_at
@@ -338,7 +338,7 @@ export class AssessmentService {
       id: data.id,
       patientId: data.patient_id,
       chiefComplaint: data.chief_complaint,
-      status: data.status as 'in-progress' | 'completed' | 'draft',
+      status: data.status as any,
       currentStep: data.current_step,
       createdAt: data.created_at,
       updatedAt: data.updated_at

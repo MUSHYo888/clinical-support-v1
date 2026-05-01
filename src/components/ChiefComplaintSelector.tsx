@@ -29,10 +29,14 @@ export function ChiefComplaintSelector({ onSelect, onBack }: ChiefComplaintSelec
   const [searchTerm, setSearchTerm] = useState('');
   const [customComplaint, setCustomComplaint] = useState('');
 
-  const filteredComplaints = commonComplaints.filter(complaint =>
-    complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    complaint.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredComplaints = React.useMemo(() => {
+    if (!searchTerm) return commonComplaints;
+    const lower = searchTerm.toLowerCase();
+    return commonComplaints.filter(complaint =>
+      complaint.name.toLowerCase().includes(lower) ||
+      complaint.category.toLowerCase().includes(lower)
+    );
+  }, [searchTerm]);
 
   const handleCustomComplaint = () => {
     if (customComplaint.trim()) {

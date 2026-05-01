@@ -1,4 +1,4 @@
-// ABOUTME: Clinical scoring systems component for calculating severity scores and risk assessments
+cli// ABOUTME: Clinical scoring systems component for calculating severity scores and risk assessments
 // ABOUTME: Provides interactive calculators for QSOFA, CURB-65, Wells scores with real-time clinical insights
 
 import React, { useState, useEffect } from 'react';

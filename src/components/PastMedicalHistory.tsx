@@ -142,9 +142,13 @@ export function PastMedicalHistory({ onSubmit, onBack }: PMHProps) {
 
   // Auto-sync with global medical context
   useEffect(() => {
-    const compiledData = compileData();
-    // @ts-ignore - socialHistoryStructured is an extended local type
-    dispatch({ type: 'SET_PMH_DATA', payload: compiledData });
+    const timer = setTimeout(() => {
+      const compiledData = compileData();
+      // @ts-ignore - socialHistoryStructured is an extended local type
+      dispatch({ type: 'SET_PMH_DATA', payload: compiledData });
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [activeConditions, conditionNotes, surgeries, medications, allergies, familyMembers, familyNotes, socialData, dispatch]);
 
   return (

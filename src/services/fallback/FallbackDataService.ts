@@ -3,22 +3,14 @@
 
 import { Question, DifferentialDiagnosis } from '@/types/medical';
 import { InvestigationRecommendation, RedFlag, ClinicalGuideline } from '@/types/medical';
-
-// Helper function to generate UUID v4
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+import { ClinicalUtils } from '@/utils/clinicalUtils';
 
 export class FallbackDataService {
   static getFallbackQuestions(chiefComplaint: string): Question[] {
     const fallbackQuestions: Record<string, Question[]> = {
       'headache': [
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'How did the headache begin?',
           type: 'multiple-choice',
           options: ['Suddenly', 'Gradually', 'After eating', 'After injury', 'Woke up with it'],
@@ -26,14 +18,14 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'On a scale of 1-10, how severe is the pain?',
           type: 'scale',
           category: 'severity',
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'Where is the headache located?',
           type: 'multiple-choice',
           options: ['Frontal', 'Temporal', 'Occipital', 'Whole head', 'One side'],
@@ -41,7 +33,7 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'How would you describe the pain?',
           type: 'multiple-choice',
           options: ['Throbbing', 'Sharp', 'Dull', 'Burning', 'Pressure'],
@@ -51,7 +43,7 @@ export class FallbackDataService {
       ],
       'fatigue': [
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'When did the fatigue begin?',
           type: 'multiple-choice',
           options: ['Days ago', 'Weeks ago', 'Months ago', 'Gradually over time', 'Suddenly'],
@@ -59,14 +51,14 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'On a scale of 1-10, how severe is the fatigue?',
           type: 'scale',
           category: 'severity',
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'What is the pattern of your fatigue?',
           type: 'multiple-choice',
           options: ['Constant throughout the day', 'Worse in morning', 'Worse in evening', 'Comes and goes', 'After activities'],
@@ -74,7 +66,7 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'How is your sleep quality?',
           type: 'multiple-choice',
           options: ['Good, restful sleep', 'Difficulty falling asleep', 'Frequent awakening', 'Early morning awakening', 'Unrefreshing sleep'],
@@ -84,7 +76,7 @@ export class FallbackDataService {
       ],
       'chest pain': [
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'How did the chest pain begin?',
           type: 'multiple-choice',
           options: ['Suddenly', 'Gradually', 'During exercise', 'At rest', 'While eating'],
@@ -92,14 +84,14 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'On a scale of 1-10, how severe is the pain?',
           type: 'scale',
           category: 'severity',
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'Where exactly is the chest pain?',
           type: 'multiple-choice',
           options: ['Center of chest', 'Left side', 'Right side', 'Under breastbone', 'Whole chest'],
@@ -107,7 +99,7 @@ export class FallbackDataService {
           required: true
         },
         {
-          id: generateUUID(),
+          id: ClinicalUtils.generateUUID(),
           text: 'How would you describe the pain?',
           type: 'multiple-choice',
           options: ['Sharp', 'Crushing', 'Burning', 'Stabbing', 'Pressure', 'Tight'],

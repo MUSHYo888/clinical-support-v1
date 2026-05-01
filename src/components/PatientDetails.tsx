@@ -12,7 +12,6 @@ import { Activity, ArrowLeft, Calendar, FileText, User, UserPlus, ClipboardList,
 import { Patient } from '@/types/medical';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { LogOutcomeDialog } from './LogOutcomeDialog';
 
@@ -65,6 +64,13 @@ export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAss
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const formatDate = (dateString: string, includeTime = false) => {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short', day: '2-digit', year: 'numeric',
+      ...(includeTime && { hour: '2-digit', minute: '2-digit', hour12: false })
+    }).format(new Date(dateString));
   };
 
   const handleDeletePatient = async () => {
@@ -167,12 +173,12 @@ export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAss
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Registered</p>
-                <p className="font-medium">{format(new Date(patient.createdAt), 'MMM dd, yyyy')}</p>
+                <p className="font-medium">{formatDate(patient.createdAt)}</p>
               </div>
               {patient.lastAssessment && (
                 <div>
                   <p className="text-sm text-muted-foreground">Last Assessment</p>
-                  <p className="font-medium">{format(new Date(patient.lastAssessment), 'MMM dd, yyyy')}</p>
+                  <p className="font-medium">{formatDate(patient.lastAssessment)}</p>
                 </div>
               )}
             </div>
@@ -216,7 +222,7 @@ export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAss
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              <span>{format(new Date(assessment.created_at), 'MMM dd, yyyy HH:mm')}</span>
+                              <span>{formatDate(assessment.created_at, true)}</span>
                               <span>•</span>
                               <span>Step {assessment.current_step}</span>
                             </div>
