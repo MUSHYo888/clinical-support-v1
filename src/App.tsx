@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import WelcomeSandbox from "./pages/WelcomeSandbox";
 import Intake from "./pages/Intake";
 import NewMedicalDashboard from "./pages/Dashboard";
+import PatientView from "./pages/PatientView";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,11 @@ const App = () => (
               <Route path="/" element={
                 <ProtectedRoute>
                   <NewMedicalDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/patient/:id" element={
+                <ProtectedRoute>
+                  <PatientView />
                 </ProtectedRoute>
               } />
               <Route path="/intake" element={

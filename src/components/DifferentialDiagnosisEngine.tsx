@@ -7,21 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Brain, 
-  TrendingUp, 
   AlertTriangle, 
   CheckCircle, 
   FileText,
   Target,
   Clock,
   RefreshCw,
-  Lightbulb,
   Shield,
   Activity,
   Stethoscope
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useMedical } from '@/context/MedicalContext';
 import { toast } from 'sonner';
@@ -76,8 +74,8 @@ export function DifferentialDiagnosisEngine({
   const [riskStratification, setRiskStratification] = useState<RiskStratification | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('diagnoses');
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [selectedDiagnosisIndex, setSelectedDiagnosisIndex] = useState(0);
 
   const generateDifferentialDiagnosis = useCallback(async () => {
     try {
@@ -197,6 +195,10 @@ export function DifferentialDiagnosisEngine({
     }
   }, [chiefComplaint, hasAttempted, state.answers, generateDifferentialDiagnosis]);
 
+  useEffect(() => {
+    setSelectedDiagnosisIndex(0);
+  }, [diagnoses]);
+
   const handleManualRetry = () => {
     setHasAttempted(false);
     setError(null);
@@ -230,7 +232,7 @@ export function DifferentialDiagnosisEngine({
 
   if (loading) {
     return (
-      <Card className="max-w-6xl mx-auto">
+      <Card className="w-full max-w-[95%] mx-auto">
         <CardContent className="flex items-center justify-center py-12">
           <div className="text-center">
             <Brain className="h-12 w-12 animate-pulse text-primary mx-auto mb-4" />
@@ -244,15 +246,28 @@ export function DifferentialDiagnosisEngine({
   }
 
   return (
-    <Card className="max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Brain className="h-6 w-6 text-primary" />
-          <span>AI-Powered Differential Diagnosis Engine</span>
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Chief Complaint: <span className="font-medium">{chiefComplaint}</span>
-        </p>
+    <Card className="w-full max-w-[95%] mx-auto shadow-sm">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6">
+        <div className="space-y-1">
+          <CardTitle className="flex items-center space-x-2 text-xl sm:text-2xl">
+            <Brain className="h-6 w-6 text-primary" />
+            <span>AI-Powered Differential Diagnosis Engine</span>
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Chief Complaint: <span className="font-medium text-foreground">{chiefComplaint}</span>
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleManualRetry} disabled={loading} className="h-8">
+            <RefreshCw className="h-4 w-4 mr-2" /> Regenerate Analysis
+          </Button>
+          {diagnoses.length > 0 && (
+            <Button variant="outline" size="sm" className="h-8">
+              <FileText className="h-4 w-4 mr-2" /> Export Report
+            </Button>
+          )}
+        </div>
 
         {/* Risk Stratification Alert */}
         {riskStratification && (
@@ -306,25 +321,6 @@ export function DifferentialDiagnosisEngine({
             </AlertDescription>
           </Alert>
         )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="diagnoses" className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>Differential Diagnoses</span>
-            </TabsTrigger>
-            <TabsTrigger value="recommendations" className="flex items-center space-x-2">
-              <Lightbulb className="h-4 w-4" />
-              <span>Clinical Recommendations</span>
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span>Clinical Analysis</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Differential Diagnoses Tab */}
-          <TabsContent value="diagnoses" className="space-y-4">
             {diagnoses.length === 0 ? (
               <div className="text-center py-8">
                 <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -335,270 +331,133 @@ export function DifferentialDiagnosisEngine({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {diagnoses.map((diagnosis, index) => (
-                  <Card key={index} className="border-l-4 border-l-primary">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          {getCategoryIcon(diagnosis.category)}
-                          <div>
-                            <h3 className="text-lg font-semibold">{diagnosis.condition}</h3>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant="outline">{diagnosis.category}</Badge>
-                              <div className="flex items-center space-x-1">
-                                {getUrgencyIcon(diagnosis.urgency)}
-                                <span className="text-sm">{diagnosis.urgency}</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* MASTER LIST (LEFT COLUMN) */}
+                <div className="col-span-1 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                  {diagnoses.map((diagnosis, index) => (
+                    <div
+                      key={index}
+                      onClick={() => setSelectedDiagnosisIndex(index)}
+                      className={cn(
+                        "p-3 rounded-lg border cursor-pointer transition-all",
+                        selectedDiagnosisIndex === index 
+                          ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20" 
+                          : "bg-card hover:bg-muted/50 border-border"
+                      )}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-semibold text-sm line-clamp-2 pr-2">{diagnosis.condition}</span>
+                        <span className={cn("font-bold text-sm", diagnosis.probability >= 70 ? 'text-red-600' : diagnosis.probability >= 50 ? 'text-amber-600' : 'text-green-600')}>
+                          {diagnosis.probability}%
+                        </span>
+                      </div>
+                      <Progress value={diagnosis.probability} className="h-1.5" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* DETAIL VIEW (RIGHT COLUMN) */}
+                <div className="col-span-1 md:col-span-2">
+                  {diagnoses[selectedDiagnosisIndex] && (
+                    <div className="flex flex-col h-full bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                      {/* Detail Header */}
+                      <div className={cn(
+                        "p-5 border-b", 
+                        (diagnoses[selectedDiagnosisIndex].probability >= 70 || diagnoses[selectedDiagnosisIndex].urgency === 'high' || diagnoses[selectedDiagnosisIndex].redFlags?.length > 0) 
+                          ? 'border-t-4 border-t-destructive' 
+                          : 'border-t-4 border-t-primary/30'
+                      )}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3">
+                            <div className="mt-1">
+                              {getCategoryIcon(diagnoses[selectedDiagnosisIndex].category)}
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-foreground">{diagnoses[selectedDiagnosisIndex].condition}</h3>
+                              <div className="flex items-center space-x-2 mt-1.5">
+                                <Badge variant="secondary" className="text-xs font-medium">{diagnoses[selectedDiagnosisIndex].category}</Badge>
+                                <div className="flex items-center space-x-1 text-muted-foreground">
+                                  {getUrgencyIcon(diagnoses[selectedDiagnosisIndex].urgency)}
+                                  <span className="text-xs uppercase tracking-wider font-semibold">{diagnoses[selectedDiagnosisIndex].urgency}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-primary">
-                            {diagnosis.probability}%
+                          <div className="text-right">
+                            <div className={cn("text-3xl font-black tracking-tighter", diagnoses[selectedDiagnosisIndex].probability >= 70 ? 'text-red-600' : diagnoses[selectedDiagnosisIndex].probability >= 50 ? 'text-amber-600' : 'text-green-600')}>
+                              {diagnoses[selectedDiagnosisIndex].probability}%
+                            </div>
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">Confidence</div>
                           </div>
-                          <Progress 
-                            value={diagnosis.probability} 
-                            className="w-24 mt-1"
-                          />
                         </div>
                       </div>
 
-                      <p className="text-muted-foreground mb-4">{diagnosis.explanation}</p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-5 space-y-6">
+                        {/* Rationale */}
                         <div>
-                          <h4 className="font-medium mb-2 flex items-center">
-                            <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                            Supporting Features
-                          </h4>
-                          <ul className="text-sm space-y-1">
-                          {diagnosis.keyFeatures?.map((feature, i) => (
-                              <li key={i} className="flex items-start">
-                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                                {feature}
-                              </li>
-                            ))}
-                          </ul>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clinical Rationale</h4>
+                          <p className="text-sm text-foreground leading-relaxed">{diagnoses[selectedDiagnosisIndex].explanation}</p>
                         </div>
 
-                        {diagnosis.conflictingFeatures && diagnosis.conflictingFeatures.length > 0 && (
-                          <div>
-                            <h4 className="font-medium mb-2 flex items-center">
-                              <AlertTriangle className="h-4 w-4 text-yellow-500 mr-1" />
-                              Conflicting Features
-                            </h4>
-                            <ul className="text-sm space-y-1">
-                              {diagnosis.conflictingFeatures?.map((feature, i) => (
-                                <li key={i} className="flex items-start">
-                                  <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                                  {feature}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                        {/* Features Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {diagnoses[selectedDiagnosisIndex].keyFeatures?.length > 0 && (
+                            <div className="space-y-2 bg-green-50/50 dark:bg-green-900/10 p-4 rounded-lg border border-green-100 dark:border-green-900/30">
+                              <h4 className="font-semibold flex items-center text-green-800 dark:text-green-400 text-sm">
+                                <CheckCircle className="h-4 w-4 mr-2" /> Supporting Features
+                              </h4>
+                              <ul className="text-sm space-y-1.5">
+                                {diagnoses[selectedDiagnosisIndex].keyFeatures.map((feature, i) => (
+                                  <li key={i} className="flex items-start text-green-700 dark:text-green-300">
+                                    <span className="mr-2 mt-0.5">•</span>
+                                    <span className="leading-tight">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {diagnoses[selectedDiagnosisIndex].conflictingFeatures && diagnoses[selectedDiagnosisIndex].conflictingFeatures!.length > 0 && (
+                            <div className="space-y-2 bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                              <h4 className="font-semibold flex items-center text-amber-800 dark:text-amber-400 text-sm">
+                                <AlertTriangle className="h-4 w-4 mr-2" /> Conflicting Features
+                              </h4>
+                              <ul className="text-sm space-y-1.5">
+                                {diagnoses[selectedDiagnosisIndex].conflictingFeatures!.map((feature, i) => (
+                                  <li key={i} className="flex items-start text-amber-700 dark:text-amber-300">
+                                    <span className="mr-2 mt-0.5">•</span>
+                                    <span className="leading-tight">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Red Flags */}
+                        {diagnoses[selectedDiagnosisIndex].redFlags?.length > 0 && (
+                          <Alert className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900/30">
+                            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                            <AlertDescription>
+                              <div className="font-semibold text-red-800 dark:text-red-400 mb-1.5">Red Flags Identified:</div>
+                              <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                                {diagnoses[selectedDiagnosisIndex].redFlags.map((flag, i) => (
+                                  <li key={i} className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>{flag}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
                         )}
                       </div>
-
-                      {diagnosis.redFlags?.length > 0 && (
-                        <Alert className="mt-4 border-red-200 bg-red-50">
-                          <AlertTriangle className="h-4 w-4 text-red-500" />
-                          <AlertDescription>
-                            <div className="font-medium text-red-700 mb-1">Red Flags Identified:</div>
-                            <ul className="text-sm text-red-600">
-                              {diagnosis.redFlags?.map((flag, i) => (
-                                <li key={i}>• {flag}</li>
-                              ))}
-                            </ul>
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-          </TabsContent>
 
-          {/* Clinical Recommendations Tab */}
-          <TabsContent value="recommendations" className="space-y-6">
-            {recommendations ? (
-              <div className="space-y-6">
-                {recommendations.immediateActions?.length > 0 && (
-                  <Card className="border-red-200">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-red-600">
-                        <AlertTriangle className="h-5 w-5 mr-2" />
-                        Immediate Actions Required
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {recommendations.immediateActions?.map((action, i) => (
-                          <li key={i} className="flex items-start">
-                            <span className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0" />
-                            {action}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Target className="h-5 w-5 mr-2" />
-                      Investigation Priorities
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {recommendations.investigationPriority?.map((item, i) => (
-                      <div key={i} className="mb-4 last:mb-0">
-                        <h4 className="font-medium mb-2">{item.condition}</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {item.recommendedTests?.map((test, j) => (
-                            <Badge key={j} variant="secondary">{test}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Clock className="h-5 w-5 mr-2" />
-                      Follow-up Recommendations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {recommendations.followUpRecommendations?.map((rec, i) => (
-                        <li key={i} className="flex items-start">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0" />
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Generate diagnoses first to see recommendations</p>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Clinical Analysis Tab */}
-          <TabsContent value="analysis" className="space-y-6">
-            {riskStratification ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Shield className="h-5 w-5 mr-2" />
-                      Risk Stratification Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">
-                          {riskStratification.overallRisk.toUpperCase()}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Overall Risk</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">
-                          {riskStratification.riskFactors.diagnosticConfidence}%
-                        </div>
-                        <div className="text-sm text-muted-foreground">Confidence</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-500">
-                          {riskStratification.riskFactors.highUrgencyConditions}
-                        </div>
-                        <div className="text-sm text-muted-foreground">High Urgency</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-500">
-                          {riskStratification.riskFactors.redFlagConditions}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Red Flags</div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium mb-3">Risk-Based Recommendations:</h4>
-                      <ul className="space-y-2">
-                        {riskStratification.recommendations?.map((rec, i) => (
-                          <li key={i} className="flex items-start">
-                            <span className="w-2 h-2 bg-primary rounded-full mt-2 mr-3 flex-shrink-0" />
-                            {rec}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Diagnostic Confidence Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {diagnoses.map((diagnosis, index) => (
-                        <div key={index} className="flex items-center space-x-3">
-                          <span className="text-sm font-medium w-32 truncate">
-                            {diagnosis.condition}
-                          </span>
-                          <div className="flex-1">
-                            <Progress value={diagnosis.probability} className="h-2" />
-                          </div>
-                          <span className="text-sm font-medium w-12 text-right">
-                            {diagnosis.probability}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Generate diagnoses first to see analysis</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        {/* Action Buttons */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button variant="outline" onClick={generateDifferentialDiagnosis} disabled={loading}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Regenerate Analysis
-          </Button>
-          
-          {diagnoses.length > 0 && (
-            <div className="flex space-x-2">
-              <Button variant="outline">
-                <FileText className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Button>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Proceed to Treatment Plan
-              </Button>
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

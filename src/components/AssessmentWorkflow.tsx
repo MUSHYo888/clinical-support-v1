@@ -16,7 +16,7 @@ import { AssessmentHeader } from './AssessmentHeader';
 import { LoadingState } from './LoadingState';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useStepManager } from './StepManager';
-import { useSaveQuestions, useSaveAnswer, useSavePMH, useSavePE } from '@/hooks/useAssessment';
+import { useSaveQuestions, useSaveAnswer, useSavePMH, useSavePE, useCompleteAssessment } from '@/hooks/useAssessment';
 import { toast } from 'sonner';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { AssessmentErrorRecovery } from './AssessmentErrorRecovery';
@@ -49,11 +49,7 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
   const [currentPhase, setCurrentPhase] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showROS, setShowROS] = useState(false);
-  const [showPMH, setShowPMH] = useState(false);
-  const [showPE, setShowPE] = useState(false);
-  const [showClinicalDecisionSupport, setShowClinicalDecisionSupport] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
+  const [currentView, setCurrentView] = useState<number | 'summary'>(1);
   const [cdsRetryKey, setCdsRetryKey] = useState(0);
   const [stepTransitionLoading, setStepTransitionLoading] = useState(false);
 
@@ -61,9 +57,10 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
   const saveAnswerMutation = useSaveAnswer();
   const savePMHMutation = useSavePMH();
   const savePEMutation = useSavePE();
+  const completeAssessmentMutation = useCompleteAssessment();
   const { updateStep } = useStepManager();
   
-  const isCompleted = state.currentAssessment?.status === 'completed';
+  const isCompleted = state.currentAssessment?.status === 'completed' || state.currentStep >= 6;
 
   const steps = [
     'History of Present Illness',
@@ -76,12 +73,13 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
 
   useEffect(() => {
     if (isCompleted) {
-      setShowSummary(true);
+      setCurrentView('summary');
       setLoading(false);
     } else {
+      setCurrentView(state.currentStep || 1);
       loadPhase1Questions();
     }
-  }, [chiefComplaint]);
+  }, [chiefComplaint, isCompleted, state.currentStep]);
 
   const loadPhase1Questions = async () => {
     if (isCompleted) return;
@@ -283,118 +281,60 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
   };
 
   const proceedToROS = async () => {
-    setShowROS(true);
+    setCurrentView(2);
     await updateStep(2);
   };
 
-  const handleROSComplete = async () => {
-    
-    try {
-      setStepTransitionLoading(true);
-      
-      setShowROS(false);
-      setShowPMH(true);
-      await updateStep(3);
-      
-      toast.success('Review of Systems completed');
-    } catch (error) {
-      console.error('Error completing ROS:', error);
-      toast.error('Failed to complete Review of Systems');
-    } finally {
-      setStepTransitionLoading(false);
-    }
+  const proceedFromROS = async () => {
+    setCurrentView(3);
+    await updateStep(3);
   };
 
-  const handlePMHComplete = async (pmhData: any) => {
-    
-    try {
-      setStepTransitionLoading(true);
-      
-      dispatch({
-        type: 'SET_PMH_DATA',
-        payload: pmhData
-      });
-      
-      // Save PMH to Supabase Database
-      if (state.currentAssessment) {
-        await savePMHMutation.mutateAsync({
-          assessmentId: state.currentAssessment.id,
-          pmhData
-        });
-      }
-
-      setShowPMH(false);
-      setShowPE(true);
-      await updateStep(4);
-      
-      toast.success('Past Medical History saved');
-    } catch (error) {
-      console.error('Error completing PMH:', error);
-      toast.error('Failed to save Past Medical History');
-    } finally {
-      setStepTransitionLoading(false);
-    }
+  const proceedFromPMH = async () => {
+    setCurrentView(4);
+    await updateStep(4);
   };
 
-  const handlePEComplete = async (peData: any) => {
-    
-    try {
-      setStepTransitionLoading(true);
-      
-      // Save PE data to context
-      dispatch({
-        type: 'SET_PE_DATA',
-        payload: peData
-      });
-      
-      if (state.currentAssessment) {
-        await savePEMutation.mutateAsync({
-          assessmentId: state.currentAssessment.id,
-          peData
-        });
-      }
-      
-      // Update UI state
-      setShowPE(false);
-      setShowClinicalDecisionSupport(true);
-      
-      // Update step in database
-      await updateStep(5);
-      
-      toast.success('Physical examination completed');
-      
-    } catch (error) {
-      console.error('Error completing Physical Examination:', error);
-      toast.error('Failed to save physical examination. Please try again.');
-      
-      // Don't proceed if there's an error - stay on PE page
-      setShowPE(true);
-      setShowClinicalDecisionSupport(false);
-      
-    } finally {
-      setStepTransitionLoading(false);
-    }
+  const proceedFromPE = async () => {
+    setCurrentView(5);
+    await updateStep(5);
   };
 
   const handleClinicalDecisionSupportComplete = async (clinicalPlan: any) => {
-    // Store clinical plan in context or database
-    
-    setShowClinicalDecisionSupport(false);
-    setShowSummary(true);
-    await updateStep(6);
+    try {
+      setStepTransitionLoading(true);
+      setCurrentView('summary');
+      await updateStep(6);
+    } finally {
+      setStepTransitionLoading(false);
+    }
   };
 
-  const handleSummaryComplete = () => {
-    onComplete();
+  const handleSummaryComplete = async () => {
+    try {
+      setStepTransitionLoading(true);
+      if (state.currentAssessment?.id && state.currentAssessment.status !== 'completed') {
+        await completeAssessmentMutation.mutateAsync(state.currentAssessment.id);
+        dispatch({ 
+          type: 'SET_CURRENT_ASSESSMENT', 
+          payload: { ...state.currentAssessment, status: 'completed' } 
+        });
+      }
+    } catch (error) {
+      console.error('Failed to complete assessment:', error);
+      toast.error('Failed to finalize assessment');
+    } finally {
+      setStepTransitionLoading(false);
+    }
   };
 
   // Calculate progress based on current phase and completion
   const calculateProgress = () => {
-    if (showSummary) return 100;
-    if (showClinicalDecisionSupport) return 85;
-    if (showPE) return 70;
-    if (showPMH) return 55;
-    if (showROS) return 40;
+    if (currentView === 'summary' || currentView === 8) return 100;
+    if (currentView === 5) return 85;
+    if (currentView === 4) return 70;
+    if (currentView === 3) return 55;
+    if (currentView === 2) return 40;
     
     if (currentPhase === 1 && phase1Questions.length > 0) {
       return (currentPhase1Index / phase1Questions.length) * 25; // Phase 1 is 25% of total
@@ -458,162 +398,164 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
     );
   }
 
-  if (showSummary) {
-    return (
-      <ClinicalSummary
-        chiefComplaint={chiefComplaint}
-        onComplete={handleSummaryComplete}
-        onBack={() => {
-          if (isCompleted) return;
-          setShowSummary(false);
-          setShowClinicalDecisionSupport(true);
-          dispatch({ type: 'SET_STEP', payload: 5 });
-        }}
-      />
-    );
-  }
-
-  if (showClinicalDecisionSupport) {
-    return (
-      <ErrorBoundary key={cdsRetryKey} 
-        fallback={
-          <div className="p-6">
-            <Card className="max-w-4xl mx-auto">
-              <CardContent className="p-8 text-center">
-                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Clinical Decision Support Unavailable</h3>
-                <p className="text-muted-foreground mb-4">
-                  There was an issue loading the clinical decision support module.
-                </p>
-                <div className="space-x-3">
-                  <Button onClick={() => setCdsRetryKey((k) => k + 1)}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    setShowClinicalDecisionSupport(false);
-                    setShowSummary(true);
-                  }}>
-                    Skip to Summary
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        }
-      >
-        <ClinicalDecisionSupport
+  switch (currentView) {
+    case 'summary':
+    case 8: // Support strict Step 8 routing param
+      return (
+        <ClinicalSummary
           chiefComplaint={chiefComplaint}
-          onComplete={handleClinicalDecisionSupportComplete}
+          onComplete={handleSummaryComplete}
           onBack={() => {
-            setShowClinicalDecisionSupport(false);
-            setShowPE(true);
-            dispatch({ type: 'SET_STEP', payload: 4 });
+            if (state.currentAssessment?.status === 'completed') {
+              onBack();
+              return;
+            }
+            setCurrentView(5);
+            dispatch({ type: 'SET_STEP', payload: 5 });
           }}
         />
-      </ErrorBoundary>
-    );
-  }
-
-  if (showPE) {
-    return (
-      <PhysicalExamination
-        chiefComplaint={chiefComplaint}
-        onComplete={handlePEComplete}
-        onBack={() => {
-          setShowPE(false);
-          setShowPMH(true);
-          dispatch({ type: 'SET_STEP', payload: 3 });
-        }}
-      />
-    );
-  }
-
-  if (showPMH) {
-    return (
-      <PastMedicalHistory
-        onSubmit={handlePMHComplete}
-        onBack={() => {
-          setShowPMH(false);
-          setShowROS(true);
-          dispatch({ type: 'SET_STEP', payload: 2 });
-        }}
-      />
-    );
-  }
-
-  if (showROS) {
-    return (
-      <ReviewOfSystemsComponent
-        onComplete={handleROSComplete}
-        onBack={() => {
-          setShowROS(false);
-          dispatch({ type: 'SET_STEP', payload: 1 });
-        }}
-      />
-    );
-  }
-
-  // Current question is already defined above as currentQuestion via getCurrentQuestion()
-
-  return (
-    <div className="p-6">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
-          <AssessmentProgress
-            currentStep={state.currentStep}
-            totalSteps={steps.length}
-            steps={steps}
-            progressPercent={progressPercent}
-            answersCount={answeredCount}
+      );
+    case 5:
+      return (
+        <ErrorBoundary key={cdsRetryKey} 
+          fallback={
+            <div className="p-6">
+              <Card className="max-w-4xl mx-auto">
+                <CardContent className="p-8 text-center">
+                  <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Clinical Decision Support Unavailable</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There was an issue loading the clinical decision support module.
+                  </p>
+                  <div className="space-x-3">
+                    <Button onClick={() => setCdsRetryKey((k) => k + 1)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                    <Button variant="outline" onClick={() => setCurrentView('summary')}>
+                      Skip to Summary
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          }
+        >
+          <ClinicalDecisionSupport
+            chiefComplaint={chiefComplaint}
+            onComplete={handleClinicalDecisionSupportComplete}
+            onBack={() => {
+              setCurrentView(4);
+              dispatch({ type: 'SET_STEP', payload: 4 });
+            }}
           />
-
-          {/* Phase Progress Stats */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Phase {currentPhase}: Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</span>
-              <span>Answers saved: {answeredCount}</span>
-              <span>Progress: {Math.round(progressPercent)}%</span>
-            </div>
-            {phaseTransition && (
-              <div className="text-xs text-gray-500 mt-1">
-                Risk Level: {phaseTransition.overallRiskLevel} | Phase 2: {phase2Triggered ? 'Active' : 'Not triggered'}
+        </ErrorBoundary>
+      );
+    case 4:
+      return (
+        <div className="p-6">
+          <Card className="max-w-6xl mx-auto shadow-sm">
+            <CardContent className="p-6">
+              <PhysicalExamination chiefComplaint={chiefComplaint} />
+              <div className="flex justify-between pt-6 border-t mt-6">
+                <Button variant="outline" onClick={() => {
+                  setCurrentView(3);
+                  dispatch({ type: 'SET_STEP', payload: 3 });
+                }}>Back</Button>
+                <Button onClick={proceedFromPE}>Continue to Decision Support</Button>
               </div>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {currentQuestion ? (
-            <QuestionComponent
-              question={currentQuestion}
-              onSubmit={handleAnswerSubmit}
-              questionNumber={getCurrentQuestionNumber()}
-              totalQuestions={getTotalQuestions()}
-            />
-          ) : (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Available</h3>
-              <p className="text-gray-600 mb-4">
-                Unable to load questions for this assessment.
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-between mt-8">
-            <Button 
-              variant="outline" 
-              onClick={onBack}
-            >
-              Back to Chief Complaint
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+            </CardContent>
+          </Card>
+        </div>
+      );
+    case 3:
+      return (
+        <div className="p-6">
+          <Card className="max-w-6xl mx-auto shadow-sm">
+            <CardContent className="p-6">
+              <PastMedicalHistory />
+              <div className="flex justify-between pt-6 border-t mt-6">
+                <Button variant="outline" onClick={() => {
+                  setCurrentView(2);
+                  dispatch({ type: 'SET_STEP', payload: 2 });
+                }}>Back</Button>
+                <Button onClick={proceedFromPMH}>Continue to Physical Exam</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    case 2:
+      return (
+        <div className="p-6">
+          <Card className="max-w-6xl mx-auto shadow-sm">
+            <CardContent className="p-6">
+              <ReviewOfSystemsComponent />
+              <div className="flex justify-between pt-6 border-t mt-6">
+                <Button variant="outline" onClick={() => {
+                  setCurrentView(1);
+                  dispatch({ type: 'SET_STEP', payload: 1 });
+                }}>Back</Button>
+                <Button onClick={proceedFromROS}>Continue to Medical History</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    case 1:
+    default:
+      return (
+        <div className="p-6">
+          <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+              <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
+              <AssessmentProgress
+                currentStep={state.currentStep}
+                totalSteps={steps.length}
+                steps={steps}
+                progressPercent={progressPercent}
+                answersCount={answeredCount}
+              />
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Phase {currentPhase}: Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</span>
+                  <span>Answers saved: {answeredCount}</span>
+                  <span>Progress: {Math.round(progressPercent)}%</span>
+                </div>
+                {phaseTransition && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Risk Level: {phaseTransition.overallRiskLevel} | Phase 2: {phase2Triggered ? 'Active' : 'Not triggered'}
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {currentQuestion ? (
+                <QuestionComponent
+                  question={currentQuestion}
+                  onSubmit={handleAnswerSubmit}
+                  questionNumber={getCurrentQuestionNumber()}
+                  totalQuestions={getTotalQuestions()}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Available</h3>
+                  <p className="text-gray-600 mb-4">
+                    Unable to load questions for this assessment.
+                  </p>
+                </div>
+              )}
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={onBack}>
+                  Back to Chief Complaint
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+  }
 }
 
 export function AssessmentWorkflow(props: AssessmentWorkflowProps) {

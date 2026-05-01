@@ -51,6 +51,7 @@ import {
   LogOut,
   Loader2,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
 // --- KPI Card Component & Types ---
@@ -210,6 +211,7 @@ const generateVignette = (patient: any) => {
 export default function NewMedicalDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("Current Shift");
   const [activeFilter, setActiveFilter] = useState("All Cases");
+  const [currentRotation, setCurrentRotation] = useState<string>("Internal Medicine");
   const [searchQueryPatients, setSearchQueryPatients] = useState("");
   const [patients, setPatients] = useState<any[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(true);
@@ -264,6 +266,8 @@ export default function NewMedicalDashboard() {
             const patientData = Array.isArray(a.patients) ? a.patients[0] : a.patients;
             return {
               id: a.id,
+              id: patientData?.id,
+              assessmentId: a.id,
               patientId: patientData?.patient_id || 'UNKNOWN',
               realPatientId: patientData?.id,
               name: patientData?.name || 'Unknown Patient',
@@ -352,13 +356,27 @@ export default function NewMedicalDashboard() {
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
                   <span className="flex items-center gap-1"><User className="h-3 w-3"/> Medical Extern</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> Internal Medicine</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/> {currentRotation}</span>
                   <span className="flex items-center gap-1"><Phone className="h-3 w-3"/> Pager: #4922</span>
                 </div>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex flex-col">
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase px-1 mb-1">Current Shift Context</span>
+              <Select value={currentRotation} onValueChange={setCurrentRotation}>
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue placeholder="Select Rotation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Internal Medicine">Internal Medicine</SelectItem>
+                  <SelectItem value="Surgery">Surgery</SelectItem>
+                  <SelectItem value="ER">Emergency Room (ER)</SelectItem>
+                  <SelectItem value="Pediatrics">Pediatrics</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <div className="text-sm">
@@ -508,7 +526,7 @@ export default function NewMedicalDashboard() {
               ) : patients.length === 0 ? (
                 <div className="py-12 text-center text-sm text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="mb-4">No patients currently assigned to your ward. Click 'Start New Intake' to begin.</p>
+                  <p className="mb-4">No active patients in this rotation. Click 'Start New Intake' to begin.</p>
                   <Button onClick={() => navigate('/intake')}>Start New Intake</Button>
                 </div>
               ) : filteredPatients.length === 0 ? (
@@ -518,11 +536,11 @@ export default function NewMedicalDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4 mt-4">
-                  {filteredPatients.map((patient) => (
-                  <div key={patient.id} className="rounded-lg border overflow-hidden bg-card transition-colors">
+                  {filteredPatients.map((patient, index) => (
+                  <div key={patient.assessmentId || index} className="rounded-lg border overflow-hidden bg-card transition-colors">
                     <div 
                       className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
-                      onClick={() => toggleExpand(patient.id)}
+                      onClick={() => navigate(`/patient/${patient.id}`)}
                     >
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{patient.name}</p>
@@ -556,7 +574,10 @@ export default function NewMedicalDashboard() {
                             View Full Case
                             <ArrowUpRight className="ml-2 h-4 w-4" />
                           </Button>
-                          <ChevronDown className={cn("h-5 w-5 transition-transform duration-200 ml-2 text-muted-foreground", expandedPatientId === patient.id ? "rotate-180" : "")} />
+                          <ChevronDown 
+                            className={cn("h-5 w-5 transition-transform duration-200 ml-2 text-muted-foreground", expandedPatientId === patient.id ? "rotate-180" : "")} 
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(patient.id); }}
+                          />
                         </div>
                       </div>
                     </div>

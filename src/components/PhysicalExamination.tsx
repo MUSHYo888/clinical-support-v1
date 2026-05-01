@@ -1,93 +1,114 @@
-
 // ABOUTME: Component for systematic physical examination documentation
-// ABOUTME: Collects examination findings organized by body systems
-import React, { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+// ABOUTME: Uses a Spatial-Exception paradigm: "Normal" by default, expand on exception
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { PhysicalExamData } from '@/types/physical-exam';
+import { useMedical } from '@/context/MedicalContext';
+import { HeartPulse, User, Activity, Bone, PersonStanding, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface PhysicalExaminationProps {
   chiefComplaint?: string;
-  onComplete: (data: PhysicalExamData) => void;
-  onBack: () => void;
+  onComplete?: (data: any) => void;
+  onBack?: () => void;
 }
-
 
 const examSystems = [
   {
-    name: 'cardiovascular',
-    label: 'Cardiovascular',
-    findings: [
-      'Regular rate and rhythm',
-      'Murmur present',
-      'Gallop present',
-      'Peripheral edema',
-      'JVD present',
-      'Carotid bruit'
-    ]
+    name: 'general',
+    label: 'General Appearance',
+    zone: 'general',
+    findings: ['Appears in distress', 'Lethargic', 'Toxic-appearing', 'Cachectic', 'Obese', 'Malnourished', 'Agitated']
   },
   {
-    name: 'pulmonary',
-    label: 'Pulmonary',
-    findings: [
-      'Clear to auscultation',
-      'Wheezes',
-      'Crackles/rales',
-      'Rhonchi',
-      'Decreased breath sounds',
-      'Use of accessory muscles'
-    ]
-  },
-  {
-    name: 'abdomen',
-    label: 'Abdomen',
-    findings: [
-      'Soft, non-tender',
-      'Tenderness present',
-      'Distended',
-      'Bowel sounds present',
-      'Bowel sounds absent',
-      'Masses palpated',
-      'Organomegaly'
-    ]
+    name: 'heent',
+    label: 'HEENT',
+    zone: 'head',
+    findings: ['Pupils unequal/unreactive', 'Scleral icterus', 'Pharyngeal erythema', 'Tonsillar exudate', 'TM erythema/bulging', 'Sinus tenderness', 'Cervical lymphadenopathy']
   },
   {
     name: 'neurological',
     label: 'Neurological',
+    zone: 'head',
+    findings: ['Altered mental status', 'Focal motor deficit', 'Focal sensory deficit', 'Cranial nerve deficit', 'Gait abnormality', 'Abnormal reflexes', 'Speech deficit']
+  },
+  {
+    name: 'cardiovascular',
+    label: 'Cardiovascular',
+    zone: 'chest',
     findings: [
-      'Alert and oriented x3',
-      'Cranial nerves intact',
-      'Motor strength 5/5',
-      'Reflexes 2+ symmetric',
-      'Sensation intact',
-      'Gait normal',
-      'Focal deficits present'
+      'Tachycardia',
+      'Bradycardia',
+      'Irregular rhythm',
+      'Murmur present',
+      'Gallop (S3/S4)',
+      'Friction rub',
+      'JVD',
+      'Diminished pulses'
+    ]
+  },
+  {
+    name: 'pulmonary',
+    label: 'Respiratory',
+    zone: 'chest',
+    findings: [
+      'Tachypnea',
+      'Wheezes',
+      'Crackles/rales',
+      'Rhonchi',
+      'Decreased breath sounds',
+      'Use of accessory muscles',
+      'Stridor'
+    ]
+  },
+  {
+    name: 'abdomen',
+    label: 'Gastrointestinal',
+    zone: 'abdomen',
+    findings: [
+      'Tenderness',
+      'Rebound/Guarding',
+      'Rigidity',
+      'Distended',
+      'Hypoactive bowel sounds',
+      'Hyperactive bowel sounds',
+      'Hepatomegaly',
+      'Splenomegaly',
+      'Organomegaly'
     ]
   },
   {
     name: 'musculoskeletal',
     label: 'Musculoskeletal',
+    zone: 'extremities',
     findings: [
-      'Full range of motion',
-      'No deformities',
       'Joint swelling',
       'Tenderness',
-      'Limited range of motion',
-      'Muscle weakness'
+      'Limited ROM',
+      'Deformity',
+      'Muscle spasm',
+      'Calf tenderness',
+      'Pedal edema'
     ]
   },
   {
     name: 'skin',
     label: 'Skin',
+    zone: 'general',
     findings: [
-      'Normal color and texture',
-      'Rash present',
-      'Lesions present',
+      'Rash',
+      'Lesion',
+      'Erythema',
+      'Warmth',
+      'Fluctuance',
+      'Induration',
+      'Cyanosis',
+      'Pallor',
       'Bruising',
       'Poor skin turgor',
       'Jaundice'
@@ -95,8 +116,26 @@ const examSystems = [
   }
 ];
 
+const BODY_ZONES = [
+  { id: 'head', label: 'Head & Neck', icon: User },
+  { id: 'chest', label: 'Chest', icon: HeartPulse },
+  { id: 'abdomen', label: 'Abdomen', icon: Activity },
+  { id: 'extremities', label: 'Extremities', icon: Bone },
+  { id: 'general', label: 'General/Skin', icon: PersonStanding }
+];
+
 export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: PhysicalExaminationProps) {
-  const [data, setData] = useState<PhysicalExamData>({
+  const { state, dispatch } = useMedical();
+
+  const initializeSystems = () => {
+    const initial: Record<string, any> = {};
+    examSystems.forEach(sys => {
+      initial[sys.name] = { normal: true, findings: [], notes: '' };
+    });
+    return { ...initial, ...(state.peData?.systems || {}) };
+  };
+
+  const [data, setData] = useState<PhysicalExamData>(state.peData || {
     vitalSigns: {
       bloodPressure: '',
       heartRate: '',
@@ -104,11 +143,23 @@ export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: Phys
       temperature: '',
       oxygenSaturation: ''
     },
-    systems: {},
+    systems: initializeSystems(),
     generalAppearance: ''
   });
 
-  const [activeTab, setActiveTab] = useState('vitals');
+  useEffect(() => {
+    const payload = { ...data };
+    const generalSys = data.systems['general'];
+    
+    // Auto-sync generalAppearance for backward compatibility with ClinicalSummary
+    if (generalSys && !generalSys.normal) {
+      payload.generalAppearance = [...generalSys.findings, generalSys.notes].filter(Boolean).join('. ');
+    } else {
+      payload.generalAppearance = 'Alert and Oriented x3, Well-developed, No Acute Distress.';
+    }
+    
+    dispatch({ type: 'SET_PE_DATA', payload });
+  }, [data, dispatch]);
 
   const handleVitalSignChange = (field: string, value: string) => {
     setData(prev => ({
@@ -120,15 +171,42 @@ export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: Phys
     }));
   };
 
-  const toggleSystemNormal = (systemName: string) => {
+  const markZoneAbnormal = (zoneId: string) => {
+    setData(prev => {
+      const newSystems = { ...prev.systems };
+      examSystems.forEach(sys => {
+        if (sys.zone === zoneId) {
+          newSystems[sys.name] = { 
+            normal: false, 
+            findings: newSystems[sys.name]?.findings || [], 
+            notes: newSystems[sys.name]?.notes || '' 
+          };
+        }
+      });
+      return { ...prev, systems: newSystems };
+    });
+  };
+
+  const restoreNormal = (systemName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setData(prev => ({
       ...prev,
       systems: {
         ...prev.systems,
-        [systemName]: {
-          ...prev.systems[systemName],
-          normal: !prev.systems[systemName]?.normal,
-          findings: prev.systems[systemName]?.normal ? [] : prev.systems[systemName]?.findings || []
+        [systemName]: { normal: true, findings: [], notes: '' }
+      }
+    }));
+  };
+
+  const markSystemAbnormal = (systemName: string) => {
+    setData(prev => ({
+      ...prev,
+      systems: {
+        ...prev.systems,
+        [systemName]: { 
+          normal: false, 
+          findings: prev.systems[systemName]?.findings || [], 
+          notes: prev.systems[systemName]?.notes || '' 
         }
       }
     }));
@@ -148,8 +226,7 @@ export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: Phys
           [systemName]: {
             ...prev.systems[systemName],
             normal: false,
-            findings: newFindings,
-            notes: prev.systems[systemName]?.notes || ''
+            findings: newFindings
           }
         }
       };
@@ -171,244 +248,157 @@ export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: Phys
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onComplete(data);
-  };
-
-  // Dynamically prioritize and reorder exam systems based on the Chief Complaint
-  const prioritizedSystems = useMemo(() => {
-    if (!chiefComplaint) return examSystems.map(s => ({ ...s, isPriority: false }));
-    
-    const complaint = chiefComplaint.toLowerCase();
-    const priorityMap: Record<string, string[]> = {
-      'cardiovascular': ['chest', 'heart', 'palpitation', 'breath', 'edema', 'faint', 'dizzi'],
-      'pulmonary': ['breath', 'cough', 'wheez', 'sputum', 'asthma', 'copd', 'chok'],
-      'abdomen': ['abdom', 'stomach', 'nausea', 'vomit', 'diarrhea', 'constipat', 'bowel', 'gi', 'pain'],
-      'neurological': ['headache', 'dizzi', 'weak', 'numb', 'seizure', 'tingl', 'vision', 'speech', 'confus'],
-      'musculoskeletal': ['joint', 'back', 'muscle', 'bone', 'pain', 'injur', 'fall', 'trauma', 'swell'],
-      'skin': ['rash', 'itch', 'burn', 'cut', 'lesion', 'skin', 'color', 'wound']
-    };
-
-    const systemsWithPriority = examSystems.map(sys => {
-      const keywords = priorityMap[sys.name] || [];
-      return { ...sys, isPriority: keywords.some(kw => complaint.includes(kw)) };
-    });
-
-    return systemsWithPriority.sort((a, b) => (a.isPriority === b.isPriority ? 0 : a.isPriority ? -1 : 1));
-  }, [chiefComplaint]);
-
-  const isSystemComplete = (systemName: string) => {
-    const system = data.systems[systemName];
-    return system && (system.normal || system.findings.length > 0);
-  };
-
-  const completedSystems = prioritizedSystems.filter(s => isSystemComplete(s.name)).length;
-
   return (
-    <div className="p-6">
-      <Card className="max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Physical Examination</CardTitle>
-          <p className="text-center text-gray-600">
-            Document systematic physical examination findings
-          </p>
-          <div className="text-center">
-            <Badge variant="outline">
-              {completedSystems}/{prioritizedSystems.length} systems examined
-            </Badge>
-          </div>
+    <div className="w-full">
+      <Card className="bg-transparent border-none shadow-none max-w-[95%] mx-auto">
+        <CardHeader className="px-0 pt-0 pb-6">
+          <CardTitle className="text-xl sm:text-2xl">Physical Examination</CardTitle>
+          <p className="text-sm text-muted-foreground">Select an abnormal zone to expand related systems. Default is Normal.</p>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="vitals">Vital Signs</TabsTrigger>
-                <TabsTrigger value="general">General</TabsTrigger>
-                <TabsTrigger value="systems">Systems</TabsTrigger>
-                <TabsTrigger value="review">Review</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="vitals" className="space-y-4">
-                <h3 className="text-lg font-medium">Vital Signs</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="bp">Blood Pressure</Label>
-                    <input
-                      id="bp"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="120/80"
-                      value={data.vitalSigns.bloodPressure}
-                      onChange={(e) => handleVitalSignChange('bloodPressure', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="hr">Heart Rate</Label>
-                    <input
-                      id="hr"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="72 bpm"
-                      value={data.vitalSigns.heartRate}
-                      onChange={(e) => handleVitalSignChange('heartRate', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rr">Respiratory Rate</Label>
-                    <input
-                      id="rr"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="16/min"
-                      value={data.vitalSigns.respiratoryRate}
-                      onChange={(e) => handleVitalSignChange('respiratoryRate', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="temp">Temperature</Label>
-                    <input
-                      id="temp"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="98.6°F"
-                      value={data.vitalSigns.temperature}
-                      onChange={(e) => handleVitalSignChange('temperature', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="o2sat">Oxygen Saturation</Label>
-                    <input
-                      id="o2sat"
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="98%"
-                      value={data.vitalSigns.oxygenSaturation}
-                      onChange={(e) => handleVitalSignChange('oxygenSaturation', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="general" className="space-y-4">
-                <h3 className="text-lg font-medium">General Appearance</h3>
-                <Textarea
-                  placeholder="Describe patient's general appearance, affect, distress level..."
-                  value={data.generalAppearance}
-                  onChange={(e) => setData(prev => ({ ...prev, generalAppearance: e.target.value }))}
-                  rows={4}
+        <CardContent className="px-0 pb-0">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+            
+            {/* COMPACT VITALS */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
+              <div className="space-y-1.5">
+                <Label htmlFor="bp" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">BP</Label>
+                <Input
+                  id="bp"
+                  placeholder="120/80"
+                  value={data.vitalSigns.bloodPressure}
+                  onChange={(e) => handleVitalSignChange('bloodPressure', e.target.value)}
+                  className="h-8 text-sm bg-background"
                 />
-              </TabsContent>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="hr" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">HR</Label>
+                <Input
+                  id="hr"
+                  placeholder="72"
+                  value={data.vitalSigns.heartRate}
+                  onChange={(e) => handleVitalSignChange('heartRate', e.target.value)}
+                  className="h-8 text-sm bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rr" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">RR</Label>
+                <Input
+                  id="rr"
+                  placeholder="16"
+                  value={data.vitalSigns.respiratoryRate}
+                  onChange={(e) => handleVitalSignChange('respiratoryRate', e.target.value)}
+                  className="h-8 text-sm bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="temp" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temp</Label>
+                <Input
+                  id="temp"
+                  placeholder="98.6°F"
+                  value={data.vitalSigns.temperature}
+                  onChange={(e) => handleVitalSignChange('temperature', e.target.value)}
+                  className="h-8 text-sm bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="o2sat" className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">O2 Sat</Label>
+                <Input
+                  id="o2sat"
+                  placeholder="98%"
+                  value={data.vitalSigns.oxygenSaturation}
+                  onChange={(e) => handleVitalSignChange('oxygenSaturation', e.target.value)}
+                  className="h-8 text-sm bg-background"
+                />
+              </div>
+            </div>
 
-              <TabsContent value="systems" className="space-y-6">
-                <h3 className="text-lg font-medium">System Examination</h3>
-                {prioritizedSystems.map((system) => (
-                  <Card key={system.name} className={`p-4 ${system.isPriority ? 'border-l-4 border-l-primary shadow-sm' : ''}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-medium">{system.label}</h4>
-                        {system.isPriority && (
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                            CC Priority
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`${system.name}-normal`}
-                          checked={data.systems[system.name]?.normal || false}
-                          onCheckedChange={() => toggleSystemNormal(system.name)}
-                        />
-                        <Label htmlFor={`${system.name}-normal`} className="text-sm">
-                          Normal examination
-                        </Label>
-                      </div>
-                    </div>
-
-                    {!data.systems[system.name]?.normal && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                          {system.findings.map((finding) => (
-                            <div key={finding} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`${system.name}-${finding}`}
-                                checked={data.systems[system.name]?.findings?.includes(finding) || false}
-                                onCheckedChange={() => toggleFinding(system.name, finding)}
-                              />
-                              <Label htmlFor={`${system.name}-${finding}`} className="text-sm">
-                                {finding}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                        <Textarea
-                          placeholder="Additional notes for this system..."
-                          value={data.systems[system.name]?.notes || ''}
-                          onChange={(e) => handleSystemNotes(system.name, e.target.value)}
-                          rows={2}
-                        />
-                      </>
+            {/* TOP ROW: BODY ZONES */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {BODY_ZONES.map(zone => {
+                const isAbnormal = examSystems.some(sys => sys.zone === zone.id && !data.systems[sys.name]?.normal);
+                return (
+                  <Button
+                    key={zone.id}
+                    type="button"
+                    variant={isAbnormal ? "default" : "outline"}
+                    className={cn(
+                      "h-16 flex flex-col gap-1.5", 
+                      isAbnormal ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200 shadow-sm" : "bg-card hover:bg-muted"
                     )}
-                  </Card>
-                ))}
-              </TabsContent>
+                    onClick={() => markZoneAbnormal(zone.id)}
+                  >
+                    <zone.icon className="h-5 w-5" />
+                    <span className="text-xs font-semibold">{zone.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
 
-              <TabsContent value="review" className="space-y-4">
-                <h3 className="text-lg font-medium">Examination Summary</h3>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium mb-2">Vital Signs</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
-                      <div>BP: {data.vitalSigns.bloodPressure || 'Not recorded'}</div>
-                      <div>HR: {data.vitalSigns.heartRate || 'Not recorded'}</div>
-                      <div>RR: {data.vitalSigns.respiratoryRate || 'Not recorded'}</div>
-                      <div>Temp: {data.vitalSigns.temperature || 'Not recorded'}</div>
-                      <div>O2 Sat: {data.vitalSigns.oxygenSaturation || 'Not recorded'}</div>
+            {/* WATERFALL: SYSTEM LIST */}
+            <div className="space-y-3 mt-6">
+              {examSystems.map((sys) => {
+                const isNormal = data.systems[sys.name]?.normal;
+                
+                if (isNormal) {
+                  return (
+                    <div 
+                      key={sys.name}
+                      className="flex items-center justify-between p-3 bg-green-50/40 border border-green-200/60 rounded-lg cursor-pointer hover:bg-green-50 transition-colors"
+                      onClick={() => markSystemAbnormal(sys.name)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="font-semibold text-green-800 text-sm">{sys.label}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100/50 text-green-700 border-green-200 text-xs">Normal</Badge>
                     </div>
-                  </div>
+                  );
+                }
 
-                  {data.generalAppearance && (
-                    <div>
-                      <h4 className="font-medium mb-2">General Appearance</h4>
-                      <p className="text-sm text-gray-700">{data.generalAppearance}</p>
+                return (
+                  <div key={sys.name} className="p-4 bg-orange-50/30 border border-orange-200 rounded-lg shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-orange-500" />
+                        <span className="font-semibold text-orange-800 text-sm">{sys.label}</span>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground hover:text-green-700 hover:bg-green-100" onClick={(e) => restoreNormal(sys.name, e)}>
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Restore to Normal
+                      </Button>
                     </div>
-                  )}
-
-                  <div>
-                    <h4 className="font-medium mb-2">System Examinations</h4>
-                    <div className="space-y-2">
-                      {prioritizedSystems.map((system) => {
-                        const systemData = data.systems[system.name];
-                        if (!systemData) return null;
-
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {sys.findings.map((finding) => {
+                        const isChecked = data.systems[sys.name]?.findings?.includes(finding) || false;
                         return (
-                          <div key={system.name} className="text-sm">
-                            <span className="font-medium">{system.label}: </span>
-                            {systemData.normal ? (
-                              <span className="text-green-600">Normal examination</span>
-                            ) : (
-                              <span>
-                                {systemData.findings.join(', ')}
-                                {systemData.notes && ` - ${systemData.notes}`}
-                              </span>
-                            )}
-                          </div>
+                          <label 
+                            key={finding} 
+                            className="flex items-start space-x-2.5 p-2 rounded-md hover:bg-orange-100/50 transition-colors cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={() => toggleFinding(sys.name, finding)}
+                              className="mt-0.5 border-orange-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                            />
+                            <span className={cn("text-xs font-medium leading-tight", isChecked ? "text-orange-900" : "text-foreground")}>
+                              {finding}
+                            </span>
+                          </label>
                         );
                       })}
                     </div>
+                    
+                    <Input
+                      placeholder={`Specific notes for ${sys.label}...`}
+                      value={data.systems[sys.name]?.notes || ''}
+                      onChange={(e) => handleSystemNotes(sys.name, e.target.value)}
+                      className="h-8 text-sm bg-white"
+                    />
                   </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-              <Button type="button" variant="outline" onClick={onBack}>
-                Back to Past Medical History
-              </Button>
-              <Button 
-                type="submit" 
-                className="bg-teal-600 hover:bg-teal-700"
-                disabled={completedSystems === 0}
-              >
-                Continue to Assessment & Plan
-              </Button>
+                );
+              })}
             </div>
+            
           </form>
         </CardContent>
       </Card>

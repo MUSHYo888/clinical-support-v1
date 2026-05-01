@@ -249,7 +249,13 @@ export function PatientDetails({ patient, onBack, onStartAssessment, onResumeAss
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => onViewCompletedAssessment(assessment.id, assessment.chief_complaint)}
+                            onClick={() => {
+                              if (!assessment?.id) {
+                                toast.error('Assessment ID is missing or invalid.');
+                                return;
+                              }
+                              onViewCompletedAssessment(assessment.id, assessment.chief_complaint);
+                            }}
                               >
                                 <FileText className="h-3 w-3 mr-1" />
                                 View Summary

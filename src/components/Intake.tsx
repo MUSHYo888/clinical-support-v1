@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,10 +84,8 @@ const defaultHpiQuestions = [
 
 export default function Intake() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { state, dispatch } = useMedical();
-  const initialStep = searchParams.get('step') ? parseInt(searchParams.get('step') as string, 10) : 1;
-  const [step, setStep] = useState(initialStep);
+  const { dispatch } = useMedical();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [complaintSearchTerm, setComplaintSearchTerm] = useState('');
   const [hpiAnswers, setHpiAnswers] = useState<Record<string, string[]>>({});
@@ -103,15 +101,6 @@ export default function Intake() {
     pmhData: null,
     peData: null
   });
-
-  // Auto-jump to the final summary step if resuming a completed assessment
-  useEffect(() => {
-    if (state.currentAssessment?.status === 'completed') {
-      setStep(7);
-    } else if (searchParams.get('step')) {
-      setStep(parseInt(searchParams.get('step') as string, 10));
-    }
-  }, [state.currentAssessment?.status, searchParams]);
 
   const updateField = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -429,15 +418,8 @@ export default function Intake() {
               {/* STEP 6: Physical Examination */}
               {step === 6 && (
                 <div className="[&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
-                  <PhysicalExamination 
+                  <PhysicalExamination
                     chiefComplaint={formData.chiefComplaint}
-                    onComplete={(data) => {
-                      updateField('peData', data);
-                      dispatch({ type: 'SET_PE_DATA', payload: data });
-                      toast.success("Physical Exam data recorded.");
-                      handleNext();
-                    }}
-                    onBack={() => handlePrev()}
                   />
                 </div>
               )}
