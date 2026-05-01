@@ -125,6 +125,23 @@ export function DifferentialDiagnosisEngine({
 
           data = result.data;
           success = true;
+          
+          // Write directly to Supabase to guarantee data persistence
+          if (assessmentId && data?.differentialDiagnoses && data.differentialDiagnoses.length > 0) {
+            try {
+              await supabase.from('differential_diagnoses').delete().eq('assessment_id', assessmentId);
+              const insertData = data.differentialDiagnoses.map((d: any) => ({
+                assessment_id: assessmentId,
+                condition_name: d.condition,
+                probability: d.probability,
+                explanation: d.explanation,
+                key_features: d.keyFeatures || []
+              }));
+              await supabase.from('differential_diagnoses').insert(insertData);
+            } catch (dbError) {
+              console.error('Direct Supabase write failed:', dbError);
+            }
+          }
         } catch (err) {
           if (currentRetries === 0) throw err;
           console.warn(`Differential Diagnosis AI failed, retrying in ${currentDelay}ms... (${currentRetries} retries left)`);

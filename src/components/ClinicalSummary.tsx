@@ -12,10 +12,11 @@ import { useNavigate } from 'react-router-dom';
 interface ClinicalSummaryProps {
   onBack?: () => void;
   chiefComplaint?: string;
+  hpiNote?: string;
   onComplete?: () => void;
 }
 
-export function ClinicalSummary({ onBack, chiefComplaint, onComplete }: ClinicalSummaryProps) {
+export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }: ClinicalSummaryProps) {
   const { state } = useMedical();
   const patient = state.currentPatient;
   const assessment = state.currentAssessment;
@@ -68,7 +69,7 @@ export function ClinicalSummary({ onBack, chiefComplaint, onComplete }: Clinical
   };
 
   // Formatting helpers
-  const hpi = Object.values(state.answers || {})
+  const hpi = hpiNote || Object.values(state.answers || {})
     ?.map((a: any) => {
       let text = String(a?.value || '');
       if (a?.notes) text += ` (${a.notes})`;
@@ -102,7 +103,7 @@ export function ClinicalSummary({ onBack, chiefComplaint, onComplete }: Clinical
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Action Bar */}
       <div className="flex justify-between items-center print:hidden mb-6">
-        <Button variant="outline" onClick={handleExit}>
+        <Button variant="outline" onClick={handleBackToProfile}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
@@ -275,6 +276,13 @@ export function ClinicalSummary({ onBack, chiefComplaint, onComplete }: Clinical
               </div>
             </div>
           </section>
+
+          {/* Final Actions */}
+          <div className="flex justify-end pt-6 border-t border-gray-200 mt-8 print:hidden">
+            <Button onClick={() => onComplete && onComplete()} className="bg-primary text-primary-foreground shadow-sm">
+              Finalize Assessment
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

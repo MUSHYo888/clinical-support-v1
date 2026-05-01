@@ -320,6 +320,7 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
           payload: { ...state.currentAssessment, status: 'completed' } 
         });
       }
+      onComplete();
     } catch (error) {
       console.error('Failed to complete assessment:', error);
       toast.error('Failed to finalize assessment');

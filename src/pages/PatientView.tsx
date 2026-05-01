@@ -5,6 +5,7 @@ import { PatientDetails } from '@/components/PatientDetails';
 import { Patient } from '@/types/medical';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ClinicalUtils } from '@/utils/clinicalUtils';
 
 export default function PatientView() {
   const { id } = useParams<{ id: string }>();
@@ -15,18 +16,30 @@ export default function PatientView() {
   useEffect(() => {
     async function fetchPatientData() {
       if (!id) return;
+      
+      // Validate UUID format before querying Supabase
+      if (!ClinicalUtils.isValidUUID(id)) {
+        console.error("Invalid UUID format for patient ID:", id);
+        toast.error("Invalid patient ID format.");
+        setLoading(false);
+        return;
+      }
+
       try {
         // Fetch patient
         const { data, error } = await supabase
           .from('patients')
           .select('*')
-          .eq('id', id);
+          .eq('id', id)
+          .maybeSingle();
 
-        console.log("Diagnostic Lab:", { searchedId: id, returnedData: data, error: error });
+        if (error) {
+          console.error("Supabase Error Message:", error.message);
+          console.error("Supabase Error Details:", error.details);
+          throw error;
+        }
 
-        if (error) throw error;
-
-        const patientRecord = data?.[0]; // Safely get the first row
+        const patientRecord = data;
 
         if (patientRecord) {
           setPatientData({
@@ -78,12 +91,12 @@ export default function PatientView() {
       onBack={() => navigate('/')}
       onStartAssessment={() => navigate('/intake')}
       onResumeAssessment={(assessmentId) => navigate(`/intake?resume=${assessmentId}`)}
-ke       onViewCompletedAssessment={(assessmentId) => {
+      onViewCompletedAssessment={(assessmentId) => {
         if (!assessmentId) {
           toast.error("Cannot load summary: missing assessment ID");
           return;
         }
-        navigate(`/intake?resume=${assessmentId}&step=7`);
+        navigate(`/intake?resume=${assessmentId}&step=8`);
       }}
       onDeletePatient={() => navigate('/')}
     />

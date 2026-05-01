@@ -237,19 +237,24 @@ export default function Intake() {
 
       // 2. Create Assessment Record
       const combinedChiefComplaint = formData.chiefComplaint + (formData.hpi ? ` - HPI: ${formData.hpi}` : '');
-      const { error: assessmentError } = await supabase
+      const { data: assessment, error: assessmentError } = await supabase
         .from('assessments')
         .insert({
           patient_id: patient.id,
           chief_complaint: combinedChiefComplaint,
           status: 'completed',
-          current_step: 7
-        });
+          current_step: 8
+        })
+        .select()
+        .single();
 
       if (assessmentError) throw assessmentError;
 
+      dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient as any });
+      dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment as any });
+
       toast.success("History completed and saved successfully!");
-      navigate("/");
+      setStep(8);
     } catch (err: unknown) {
       console.error(err);
       const error = err as Error;

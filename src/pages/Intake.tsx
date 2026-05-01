@@ -24,6 +24,7 @@ import { ReviewOfSystemsComponent } from "@/components/ReviewOfSystemsComponent"
 import { PastMedicalHistory } from "@/components/PastMedicalHistory";
 import { PhysicalExamination } from "@/components/PhysicalExamination";
 import { DifferentialDiagnosisEngine } from "@/components/DifferentialDiagnosisEngine";
+import { ClinicalSummary } from "@/components/ClinicalSummary";
 import { PatientDemographics } from "@/components/PatientDemographics";
 
 const commonComplaints = [
@@ -103,15 +104,6 @@ export default function Intake() {
     pmhData: null,
     peData: null
   });
-
-  // Auto-jump to the final summary step if resuming a completed assessment
-  useEffect(() => {
-    if (state.currentAssessment?.status === 'completed') {
-      setStep(7);
-    } else if (searchParams.get('step')) {
-      setStep(parseInt(searchParams.get('step') as string, 10));
-    }
-  }, [state.currentAssessment?.status, searchParams]);
 
   const updateField = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -248,19 +240,25 @@ export default function Intake() {
 
       // 2. Create Assessment Record
       const combinedChiefComplaint = formData.chiefComplaint + (formData.hpi ? ` - HPI: ${formData.hpi}` : '');
-      const { error: assessmentError } = await supabase
+      const { data: assessment, error: assessmentError } = await supabase
         .from('assessments')
         .insert({
           patient_id: patient.id,
           chief_complaint: combinedChiefComplaint,
           status: 'completed',
-          current_step: 7
-        });
+          current_step: 8
+        })
+        .select()
+        .single();
 
       if (assessmentError) throw assessmentError;
 
+      // Ensure context has the new patient and assessment so ClinicalSummary can fetch data
+      dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient as any });
+      dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment as any });
+
       toast.success("History completed and saved successfully!");
-      navigate("/");
+      setStep(8);
     } catch (err: unknown) {
       console.error(err);
       const error = err as Error;
@@ -451,33 +449,47 @@ export default function Intake() {
                 </div>
               )}
               
+              {/* STEP 8: Clinical Summary */}
+              {step === 8 && (
+                <div className="[&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
+                  <ClinicalSummary 
+                    chiefComplaint={formData.chiefComplaint}
+                    hpiNote={formData.hpi}
+                    onComplete={() => navigate("/")}
+                    onBack={() => setStep(7)}
+                  />
+                </div>
+              )}
+              
             </motion.div>
 
             {/* Form Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t mt-8 gap-4">
-              {step === 1 ? (
-                <Button variant="outline" onClick={() => navigate("/")} className="w-full sm:w-auto">
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-                </Button>
-              ) : (
-                <Button variant="outline" onClick={handlePrev} disabled={loading} className="w-full sm:w-auto">
-                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-                </Button>
-              )}
-              
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                {step < 7 ? (
-                  <Button onClick={handleNext} className="w-full sm:w-auto">
-                    Next <ChevronRight className="ml-2 h-4 w-4" />
+            {step !== 8 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t mt-8 gap-4">
+                {step === 1 ? (
+                  <Button variant="outline" onClick={() => navigate("/")} className="w-full sm:w-auto">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
                   </Button>
                 ) : (
-                  <Button onClick={handleCompleteIntake} disabled={loading} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                    Complete History
+                  <Button variant="outline" onClick={handlePrev} disabled={loading} className="w-full sm:w-auto">
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                   </Button>
                 )}
+                
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  {step < 7 ? (
+                    <Button onClick={handleNext} className="w-full sm:w-auto">
+                      Next <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleCompleteIntake} disabled={loading} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
+                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                      Complete History
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
