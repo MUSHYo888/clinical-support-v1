@@ -201,16 +201,15 @@ export class AIService {
         oxygenSaturation: 98
       };
 
-      const severityScores = this.calculateRelevantScores(chiefComplaint, answers, vitals, age);
+      const severityScores = this.calculateRelevantScores(chiefComplaint, vitals, age);
       
       const riskAssessment = ClinicalScoringService.assessOverallRisk(
         age,
         vitals,
-        this.extractComorbidities(rosData),
-        Object.values(answers).map(a => String(a.value))
+        this.extractComorbidities(rosData)
       );
 
-      const clinicalAlerts = this.generateClinicalAlerts(chiefComplaint, answers, vitals, severityScores);
+      const clinicalAlerts = this.generateClinicalAlerts(vitals, severityScores);
 
       const triageRecommendation = ClinicalScoringService.generateTriageRecommendation(
         riskAssessment.overallRisk,
@@ -230,13 +229,12 @@ export class AIService {
     } catch (error) {
       this.logAICall('generateAdvancedClinicalSupport', chiefComplaint, false, error);
       console.error('Error generating advanced clinical support:', error);
-      return this.getFallbackAdvancedSupport(chiefComplaint);
+      return this.getFallbackAdvancedSupport();
     }
   }
 
   private static calculateRelevantScores(
     chiefComplaint: string,
-    answers: Record<string, Answer>,
     vitals: AssessmentContext,
     age: number
   ): SeverityScore[] {
@@ -283,7 +281,7 @@ export class AIService {
   private static extractComorbidities(rosData: ReviewOfSystems): string[] {
     const comorbidities: string[] = [];
     
-    Object.entries(rosData).forEach(([system, data]) => {
+    Object.values(rosData).forEach((data) => {
       if (data.positive && Array.isArray(data.positive)) {
         comorbidities.push(...data.positive);
       }
@@ -293,8 +291,6 @@ export class AIService {
   }
 
   private static generateClinicalAlerts(
-    chiefComplaint: string,
-    answers: Record<string, Answer>,
     vitals: AssessmentContext,
     severityScores: SeverityScore[]
   ): ClinicalAlert[] {
@@ -349,7 +345,7 @@ export class AIService {
     return alerts;
   }
 
-  private static getFallbackAdvancedSupport(chiefComplaint: string): AdvancedClinicalSupport {
+  private static getFallbackAdvancedSupport(): AdvancedClinicalSupport {
     return {
       severityScores: [],
       riskAssessment: {

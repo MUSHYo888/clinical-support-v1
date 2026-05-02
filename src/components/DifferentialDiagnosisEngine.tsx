@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { toast } from 'sonner';
 
 interface DifferentialDiagnosis {

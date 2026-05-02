@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, RefreshCw, Home, RotateCcw, Download } from 'lucide-react';
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { useAssessment } from '@/hooks/useAssessment';
 
 interface AssessmentErrorRecoveryProps {

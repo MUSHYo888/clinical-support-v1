@@ -32,7 +32,7 @@ export class AssessmentService {
       .insert({
         patient_id: patientId,
         chief_complaint: chiefComplaint,
-        status: ASSESSMENT_STATUS.IN_PROGRESS,
+        status: 'in-progress',
         current_step: 1
       })
       .select()
@@ -150,7 +150,7 @@ export class AssessmentService {
   }
 
   static async saveReviewOfSystems(assessmentId: string, systemName: string, rosData: { positive: string[]; negative: string[]; notes?: string }): Promise<void> {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('review_of_systems')
       .upsert({
         assessment_id: assessmentId,

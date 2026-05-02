@@ -11,9 +11,9 @@ import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { PatientList } from '@/components/PatientList';
 import { AssessmentResume } from '@/components/AssessmentResume';
 import { AssessmentErrorRecovery } from '@/components/AssessmentErrorRecovery';
-import { Patient, Assessment } from '@/types/medical';
-import { useMedical } from '@/context/MedicalContext';
-import { useCreateAssessment, useUpdateAssessmentStep, useAssessment } from '@/hooks/useAssessment';
+import { Patient } from '@/types/medical';
+import { useMedical } from '@/hooks/useMedical';
+import { useCreateAssessment } from '@/hooks/useAssessment';
 import { useUpdatePatientAssessment } from '@/hooks/usePatients';
 import { AssessmentService } from '@/services/assessmentService';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,7 +46,7 @@ const Index = () => {
   useEffect(() => {
     const checkActiveSession = async () => {
       try {
-        const savedAssessmentId = localStorage.getItem(SESSION_KEYS.ASSESSMENT_ID);
+        const savedAssessmentId = localStorage.getItem(SESSION_KEYS.assessmentId);
         if (!savedAssessmentId) {
           setSessionChecked(true);
           return;
@@ -56,13 +56,13 @@ const Index = () => {
           .from('assessments')
           .select('*, patients!inner(*)')
           .eq('id', savedAssessmentId)
-          .eq('status', ASSESSMENT_STATUS.IN_PROGRESS)
+          .eq('status', 'in-progress')
           .single();
 
         if (error || !assessment) {
           // Clear stale session
-          localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
-          localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
+          localStorage.removeItem(SESSION_KEYS.assessmentId);
+          localStorage.removeItem(SESSION_KEYS.patientId);
           setSessionChecked(true);
           return;
         }
@@ -110,26 +110,21 @@ const Index = () => {
         toast.info('Resumed your in-progress assessment');
       } catch (err) {
         console.error('Failed to restore session:', err);
-        localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
-        localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
+        localStorage.removeItem(SESSION_KEYS.assessmentId);
+        localStorage.removeItem(SESSION_KEYS.patientId);
       } finally {
         setSessionChecked(true);
       }
     };
 
     checkActiveSession();
-  }, []);
+  }, [dispatch]);
 
   const handleError = (error: string, context?: string) => {
     console.error(`Global error in ${context || 'unknown context'}:`, error);
     setGlobalError(error);
     setCurrentView('error-recovery');
     toast.error(`Error: ${error}`);
-  };
-
-  const handleErrorRecovery = () => {
-    setGlobalError(null);
-    setCurrentView('dashboard');
   };
 
   const handleNewPatient = () => {
@@ -171,8 +166,8 @@ const Index = () => {
       dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment });
 
       // Persist active session
-      localStorage.setItem(SESSION_KEYS.ASSESSMENT_ID, assessment.id);
-      localStorage.setItem(SESSION_KEYS.PATIENT_ID, state.currentPatient.id);
+      localStorage.setItem(SESSION_KEYS.assessmentId, assessment.id);
+      localStorage.setItem(SESSION_KEYS.patientId, state.currentPatient.id);
 
       setCurrentView('assessment');
       toast.success('Assessment started successfully');
@@ -185,8 +180,8 @@ const Index = () => {
   const handleAssessmentComplete = () => {
     try {
       // Clear active session
-      localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
-      localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
+      localStorage.removeItem(SESSION_KEYS.assessmentId);
+      localStorage.removeItem(SESSION_KEYS.patientId);
       setCurrentView('summary');
       toast.success('Assessment completed!');
     } catch (error) {
@@ -197,8 +192,8 @@ const Index = () => {
   const handleBackToDashboard = () => {
     try {
       dispatch({ type: 'RESET_ASSESSMENT' });
-      localStorage.removeItem(SESSION_KEYS.ASSESSMENT_ID);
-      localStorage.removeItem(SESSION_KEYS.PATIENT_ID);
+      localStorage.removeItem(SESSION_KEYS.assessmentId);
+      localStorage.removeItem(SESSION_KEYS.patientId);
       setCurrentView('dashboard');
       setSelectedComplaint('');
       setGlobalError(null);
@@ -299,7 +294,6 @@ const Index = () => {
         }}
         onReturnHome={handleBackToDashboard}
         assessmentId={state.currentAssessment?.id}
-        patientId={state.currentPatient?.id}
       />
     );
   }

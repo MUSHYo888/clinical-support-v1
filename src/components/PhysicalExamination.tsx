@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { PhysicalExamData } from '@/types/physical-exam';
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { HeartPulse, User, Activity, Bone, PersonStanding, CheckCircle, AlertCircle } from 'lucide-react';
 
 const examSystems = [

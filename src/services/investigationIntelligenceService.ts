@@ -16,16 +16,13 @@ import { ContraindicationChecker } from './investigation/ContraindicationChecker
 export class InvestigationIntelligenceService {
   
   static analyzeCostBenefit(
-    investigationId: string,
-    patientData: any,
-    clinicalContext: any
+    investigationId: string
   ): CostBenefitAnalysis {
-    return CostBenefitAnalyzer.analyzeCostBenefit(investigationId, patientData, clinicalContext);
+    return CostBenefitAnalyzer.analyzeCostBenefit(investigationId);
   }
 
   static getEvidenceBasedPathway(
-    chiefComplaint: string,
-    differentialDiagnoses: any[]
+    chiefComplaint: string
   ): EvidenceBasedPathway {
     const protocols = InvestigationDatabaseService.getEvidenceBasedProtocols();
     const complaint = chiefComplaint.toLowerCase();
@@ -46,15 +43,11 @@ export class InvestigationIntelligenceService {
   static checkContraindications(
     investigationId: string,
     patientData: any,
-    medications: string[] = [],
-    allergies: string[] = [],
     medicalHistory: string[] = []
   ): ContraindicationCheck {
     return ContraindicationChecker.checkContraindications(
       investigationId,
       patientData,
-      medications,
-      allergies,
       medicalHistory
     );
   }
@@ -132,18 +125,16 @@ export class InvestigationIntelligenceService {
   static generateInvestigationIntelligence(
     investigationId: string,
     chiefComplaint: string,
-    patientData: any,
-    differentialDiagnoses: any[]
+    patientData: any
   ): InvestigationIntelligence {
-    const costBenefit = this.analyzeCostBenefit(investigationId, patientData, { chiefComplaint });
-    const pathway = this.getEvidenceBasedPathway(chiefComplaint, differentialDiagnoses);
+    const costBenefit = this.analyzeCostBenefit(investigationId);
+    const pathway = this.getEvidenceBasedPathway(chiefComplaint);
     const contraindications = this.checkContraindications(investigationId, patientData);
     const followUp = this.generateFollowUpAlgorithm(investigationId);
     
     const overallRecommendation = this.generateOverallRecommendation(
       costBenefit,
-      contraindications,
-      patientData
+      contraindications
     );
 
     return {
@@ -282,8 +273,7 @@ export class InvestigationIntelligenceService {
 
   private static generateOverallRecommendation(
     costBenefit: CostBenefitAnalysis,
-    contraindications: ContraindicationCheck,
-    patientData: any
+    contraindications: ContraindicationCheck
   ): InvestigationRecommendation {
     let recommendation: any = 'recommended';
     let strength = 7;

@@ -9,8 +9,6 @@ export class ContraindicationChecker {
   static checkContraindications(
     investigationId: string,
     patientData: any,
-    medications: string[] = [],
-    allergies: string[] = [],
     medicalHistory: string[] = []
   ): ContraindicationCheck {
     const contraindicationDatabase = InvestigationDatabaseService.getContraindicationDatabase();
@@ -29,7 +27,7 @@ export class ContraindicationChecker {
     };
   }
 
-  private static detectContraindications(contraData: any, patientData: any, history: string[]) {
+  private static detectContraindications(contraData: any, _patientData: any, history: string[]) {
     // Simplified contraindication detection logic
     const contraindications: Contraindication[] = [];
     const warnings: Warning[] = contraData.warnings || [];

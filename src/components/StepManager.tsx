@@ -1,7 +1,7 @@
 
 // ABOUTME: Step management utilities for assessment workflow
 // ABOUTME: Handles step transitions and workflow state management
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { useUpdateAssessmentStep } from '@/hooks/useAssessment';
 
 export function useStepManager() {

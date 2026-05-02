@@ -121,7 +121,7 @@ export class AdvancedAnalyticsService {
     }
   }
 
-  static async getPatientOutcomes(timeRange: string): Promise<PatientOutcome[]> {
+  static async getPatientOutcomes(): Promise<PatientOutcome[]> {
     try {
       // This would typically fetch from a dedicated outcomes tracking table
       // For now, we'll generate realistic mock data
@@ -133,7 +133,7 @@ export class AdvancedAnalyticsService {
     }
   }
 
-  static async getClinicalInsights(timeRange: string): Promise<ClinicalInsight[]> {
+  static async getClinicalInsights(): Promise<ClinicalInsight[]> {
     try {
       // This would use AI to analyze patterns in clinical data
       // For now, generating realistic insights based on common clinical patterns
@@ -230,8 +230,8 @@ export class AdvancedAnalyticsService {
     try {
       const [metrics, outcomes, insights] = await Promise.all([
         this.getAnalyticsMetrics(timeRange),
-        this.getPatientOutcomes(timeRange),
-        this.getClinicalInsights(timeRange)
+        this.getPatientOutcomes(),
+        this.getClinicalInsights()
       ]);
 
       // Create a comprehensive report object
@@ -301,8 +301,6 @@ export class AdvancedAnalyticsService {
       const complaint = chiefComplaints[Math.floor(Math.random() * chiefComplaints.length)];
       const diagnosis = diagnoses[Math.floor(Math.random() * diagnoses.length)];
       
-      const outcomeTypes: ('improved' | 'stable' | 'declined' | 'resolved')[] = 
-        ['improved', 'stable', 'declined', 'resolved'];
       const weights = [0.4, 0.3, 0.05, 0.25]; // Weighted towards positive outcomes
       
       let outcome: 'improved' | 'stable' | 'declined' | 'resolved';

@@ -125,8 +125,7 @@ export class ClinicalScoringService {
   static assessOverallRisk(
     age: number,
     vitalSigns: any,
-    comorbidities: string[],
-    symptoms: string[]
+    comorbidities: string[]
   ): RiskAssessment {
     const riskFactors: RiskFactor[] = [];
     let totalRiskScore = 0;

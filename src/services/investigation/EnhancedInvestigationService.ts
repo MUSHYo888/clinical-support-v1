@@ -5,16 +5,11 @@
 import { InvestigationDatabaseService } from './InvestigationDatabaseService';
 import { CostBenefitAnalyzer } from './CostBenefitAnalyzer';
 import { ContraindicationChecker } from './ContraindicationChecker';
-import { 
-  InvestigationIntelligence, 
-  InvestigationRecommendation, 
-  EvidenceBasedPathway 
-} from '@/types/investigation-intelligence';
+import { InvestigationRecommendation } from '@/types/investigation-intelligence';
 
 export class EnhancedInvestigationService {
   static generateSmartRecommendations(
     chiefComplaint: string,
-    differentialDiagnoses: any[],
     patientData: any
   ): any[] {
     const protocols = InvestigationDatabaseService.getEvidenceBasedProtocols();
@@ -35,7 +30,7 @@ export class EnhancedInvestigationService {
     }
 
     // Generate recommendations based on protocol
-    return relevantProtocol.investigations.map((inv: any, index: number) => {
+    return relevantProtocol.investigations.map((inv: any) => {
       const investigation = {
         id: inv.name.toLowerCase().replace(/\s+/g, '-'),
         name: inv.name,
@@ -54,9 +49,7 @@ export class EnhancedInvestigationService {
         contraindications: this.getContraindications(investigation.id),
         intelligence: this.generateInvestigationIntelligence(
           investigation.id,
-          chiefComplaint,
-          patientData,
-          differentialDiagnoses
+          patientData
         )
       };
     });
@@ -93,9 +86,7 @@ export class EnhancedInvestigationService {
       contraindications: [],
       intelligence: this.generateInvestigationIntelligence(
         inv.id,
-        chiefComplaint,
-        {},
-        []
+        {}
       )
     }));
   }
@@ -200,15 +191,9 @@ export class EnhancedInvestigationService {
 
   private static generateInvestigationIntelligence(
     investigationId: string,
-    chiefComplaint: string,
-    patientData: any,
-    differentialDiagnoses: any[]
+    patientData: any
   ): any {
-    const costBenefit = CostBenefitAnalyzer.analyzeCostBenefit(
-      investigationId,
-      patientData,
-      { chiefComplaint }
-    );
+    const costBenefit = CostBenefitAnalyzer.analyzeCostBenefit(investigationId);
 
     const contraindications = ContraindicationChecker.checkContraindications(
       investigationId,

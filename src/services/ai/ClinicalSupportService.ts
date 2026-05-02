@@ -3,7 +3,6 @@
 // ABOUTME: Generates investigation recommendations, red flags, and clinical guidelines with retry logic
 
 import { supabase } from '@/integrations/supabase/client';
-import { FallbackDataService } from '../fallback/FallbackDataService';
 import { withRetry } from '@/utils/withRetry';
 
 export class ClinicalSupportService {

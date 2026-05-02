@@ -167,7 +167,6 @@ export class AnswerAnalysisService {
   ): void {
     
     // Check for symptom complexity requiring detailed assessment
-    const answerCount = Object.keys(answers).length;
     const concerningAnswers = Object.values(answers).filter(a => 
       typeof a.value === 'string' && 
       (a.value.includes('severe') || a.value.includes('concerning') || a.value.includes('worse'))

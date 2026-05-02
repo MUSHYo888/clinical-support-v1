@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EnhancedQuestionGeneratorService, PhaseTransitionData } from '@/services/clinical/EnhancedQuestionGeneratorService';
 import { Question, Answer } from '@/types/medical';
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { QuestionComponent } from './QuestionComponent';
 import { ReviewOfSystemsComponent } from './ReviewOfSystemsComponent';
 import { PastMedicalHistory } from './PastMedicalHistory';

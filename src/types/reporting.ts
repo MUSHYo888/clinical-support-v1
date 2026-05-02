@@ -36,6 +36,7 @@ export interface ReportContent {
   }>;
   treatmentPlan?: string[];
   followUpInstructions?: string[];
+  clinicalDecisionData?: any;
 }
 
 export interface ReferralLetter {

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,11 +22,8 @@ import {
   ArrowUpRight,
   MoreHorizontal,
   Calendar,
-  LayoutGrid,
   FileText,
   ClipboardList,
-  Languages,
-  Archive,
   Brain,
   Clock,
   AlertTriangle,
@@ -37,7 +34,6 @@ import {
   Plus,
   CheckCircle2,
   Circle,
-  GraduationCap,
   User,
   Phone,
   MapPin,
@@ -193,23 +189,9 @@ function KpiCard({
   );
 }
 
-const generateVignette = (patient: any) => {
-  if (!patient) return "";
-  const demo = `A ${patient.age}-year-old ${patient.gender}`;
-  const ddx = patient.differentials && patient.differentials.length > 0 
-    ? patient.differentials.map((d: any) => `- ${d.name}`).join('\n') 
-    : "- Pending";
-  
-  return `📚 CLINICAL CASE STUDY\n\n` +
-         `1️⃣ PRESENTATION:\n${demo} presents to the ER/Clinic.\nChief Complaint: ${patient.chiefComplaint}\n\n` +
-         `2️⃣ KEY FINDINGS:\n[Insert Vitals/Physical Exam here]\n\n` +
-         `3️⃣ DIFFERENTIAL DIAGNOSIS:\n${ddx}\n\n` +
-         `4️⃣ CLINICAL QUESTION:\nWhat is the most appropriate next step in management?`;
-};
-
 // --- Main Dashboard Component ---
 export default function NewMedicalDashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState("Current Shift");
+  const [selectedPeriod] = useState("Current Shift");
   const [activeFilter, setActiveFilter] = useState("All Cases");
   const [currentRotation, setCurrentRotation] = useState<string>("Internal Medicine");
   const [searchQueryPatients, setSearchQueryPatients] = useState("");
@@ -265,7 +247,6 @@ export default function NewMedicalDashboard() {
           const mapped = data.map((a: any) => {
             const patientData = Array.isArray(a.patients) ? a.patients[0] : a.patients;
             return {
-              id: a.id,
               id: patientData?.id,
               assessmentId: a.id,
               patientId: patientData?.patient_id || 'UNKNOWN',
@@ -698,7 +679,7 @@ export default function NewMedicalDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 mt-4">
-                  {recentPatients.map((patient) => (
+                  {patients.map((patient) => (
                     <div key={patient.id} className="bg-muted/30 p-4 rounded-lg border">
                       <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
                         <span className="font-semibold text-foreground">{patient.name} • {patient.age}/{patient.gender}</span>

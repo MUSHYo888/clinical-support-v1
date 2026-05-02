@@ -1,22 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2, Loader2, ClipboardList,
+  ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   Search, Brain, Heart, Activity, Eye, Ear
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useMedical } from "@/context/MedicalContext";
+import { useMedical } from "@/hooks/useMedical";
 
 import { AssessmentHeader } from "@/components/AssessmentHeader";
 import { AssessmentProgress } from "@/components/AssessmentProgress";
@@ -86,7 +85,7 @@ const defaultHpiQuestions = [
 export default function Intake() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { state, dispatch } = useMedical();
+  const { dispatch } = useMedical();
   const initialStep = searchParams.get('step') ? parseInt(searchParams.get('step') as string, 10) : 1;
   const [step, setStep] = useState(initialStep);
   const [loading, setLoading] = useState(false);
@@ -405,15 +404,7 @@ export default function Intake() {
               {/* STEP 4: PMH */}
               {step === 4 && (
                 <div className="space-y-8 [&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
-                  <PastMedicalHistory 
-                    onSubmit={(data) => {
-                      updateField('pmhData', data);
-                      dispatch({ type: 'SET_PMH_DATA', payload: data });
-                      toast.success("PMH data recorded.");
-                      handleNext();
-                    }}
-                    onBack={() => handlePrev()}
-                  />
+                  <PastMedicalHistory />
                 </div>
               )}
 
@@ -427,16 +418,7 @@ export default function Intake() {
               {/* STEP 6: Physical Examination */}
               {step === 6 && (
                 <div className="[&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
-                  <PhysicalExamination 
-                    chiefComplaint={formData.chiefComplaint}
-                    onComplete={(data) => {
-                      updateField('peData', data);
-                      dispatch({ type: 'SET_PE_DATA', payload: data });
-                      toast.success("Physical Exam data recorded.");
-                      handleNext();
-                    }}
-                    onBack={() => handlePrev()}
-                  />
+                  <PhysicalExamination />
                 </div>
               )}
 

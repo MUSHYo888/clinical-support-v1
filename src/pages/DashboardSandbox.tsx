@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,11 +20,8 @@ import {
   ArrowUpRight,
   MoreHorizontal,
   Calendar,
-  LayoutGrid,
   FileText,
   ClipboardList,
-  Languages,
-  Archive,
   Brain,
   Clock,
   AlertTriangle,
@@ -35,7 +32,6 @@ import {
   Plus,
   CheckCircle2,
   Circle,
-  GraduationCap,
   User,
   Phone,
   MapPin,
@@ -236,21 +232,9 @@ const recentPatients = [
   },
 ];
 
-const generateVignette = (patient: any) => {
-  if (!patient) return "";
-  const demo = `A ${patient.age}-year-old ${patient.gender}`;
-  const ddx = patient.differentials ? patient.differentials.map((d: any) => `- ${d.name}`).join('\n') : "- Pending";
-  
-  return `📚 CLINICAL CASE STUDY\n\n` +
-         `1️⃣ PRESENTATION:\n${demo} presents to the ER/Clinic.\nChief Complaint: ${patient.chiefComplaint}\n\n` +
-         `2️⃣ KEY FINDINGS:\n[Insert Vitals/Physical Exam here]\n\n` +
-         `3️⃣ DIFFERENTIAL DIAGNOSIS:\n${ddx}\n\n` +
-         `4️⃣ CLINICAL QUESTION:\nWhat is the most appropriate next step in management?`;
-};
-
 // --- Main Dashboard Component ---
 export default function Dashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState("Current Shift");
+  const [selectedPeriod] = useState("Current Shift");
   const [activeFilter, setActiveFilter] = useState("All Cases");
   const [showHandoff, setShowHandoff] = useState(false);
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);

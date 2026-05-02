@@ -35,7 +35,7 @@ export function TreatmentRecommendations({
   condition,
   severity,
   patientData,
-  differentialDiagnoses,
+  differentialDiagnoses: _differentialDiagnoses,
   onBack,
   onComplete
 }: TreatmentRecommendationsProps) {
@@ -66,7 +66,6 @@ export function TreatmentRecommendations({
     const plan = TreatmentManagementService.generateDischargePlan(
       patientData.id || 'temp-id',
       condition,
-      { medications: selectedMeds },
       selectedMeds
     );
     

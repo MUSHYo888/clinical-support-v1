@@ -1,7 +1,7 @@
 
 // ABOUTME: Global state management for medical assessment workflow
 // ABOUTME: Manages patient data, assessment state, answers, and clinical data
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useReducer, ReactNode } from 'react';
 import { Patient, Assessment, Answer, ReviewOfSystems } from '@/types/medical';
 import { PhysicalExamData } from '@/types/physical-exam';
 
@@ -109,11 +109,12 @@ function medicalReducer(state: MedicalState, action: MedicalAction): MedicalStat
   }
 }
 
-interface MedicalContextType {
+export interface MedicalContextType {
   state: MedicalState;
   dispatch: React.Dispatch<MedicalAction>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 const MedicalContext = createContext<MedicalContextType | undefined>(undefined);
 
 export function MedicalProvider({ children }: { children: ReactNode }) {
@@ -124,12 +125,4 @@ export function MedicalProvider({ children }: { children: ReactNode }) {
       {children}
     </MedicalContext.Provider>
   );
-}
-
-export function useMedical() {
-  const context = useContext(MedicalContext);
-  if (context === undefined) {
-    throw new Error('useMedical must be used within a MedicalProvider');
-  }
-  return context;
 }

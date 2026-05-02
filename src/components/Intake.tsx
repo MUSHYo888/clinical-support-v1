@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2, Loader2, ClipboardList,
+  ArrowLeft, ChevronRight, ChevronLeft, CheckCircle2, Loader2,
   Search, Brain, Heart, Activity, Eye, Ear
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useMedical } from "@/context/MedicalContext";
+import { useMedical } from "@/hooks/useMedical";
 
 import { AssessmentHeader } from "@/components/AssessmentHeader";
 import { AssessmentProgress } from "@/components/AssessmentProgress";

@@ -40,7 +40,7 @@ import { InvestigationIntelligenceService } from '@/services/investigationIntell
 import { TreatmentManagementService } from '@/services/treatmentManagementService';
 import { DifferentialDiagnosisEngine } from './DifferentialDiagnosisEngine';
 import { ClinicalScoringSystem } from './ClinicalScoringSystem';
-import { useMedical } from '@/context/MedicalContext';
+import { useMedical } from '@/hooks/useMedical';
 import { useSaveClinicalDecisionSupport } from '@/hooks/useClinicalDecisionSupport';
 import { toast } from 'sonner';
 import { DifferentialDiagnosis, InvestigationRecommendation } from '@/types/medical';

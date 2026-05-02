@@ -39,7 +39,7 @@ export class PDFGeneratorService {
 
     // Header
     if (config.includeHeader) {
-      yPosition = this.addHeader(pdf, config.margins.left, yPosition, contentWidth);
+      yPosition = this.addHeader(pdf, config.margins.left, yPosition);
     }
 
     // Title
@@ -49,7 +49,7 @@ export class PDFGeneratorService {
     yPosition += 10;
 
     // Patient Demographics
-    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition, contentWidth);
+    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition);
     
     // Chief Complaint
     yPosition = this.addSection(pdf, 'Chief Complaint', report.content.chiefComplaint, config.margins.left, yPosition, contentWidth);
@@ -61,7 +61,7 @@ export class PDFGeneratorService {
 
     // Review of Systems
     if (Object.keys(report.content.reviewOfSystems).length > 0) {
-      yPosition = this.addReviewOfSystems(pdf, report.content.reviewOfSystems, config.margins.left, yPosition, contentWidth);
+      yPosition = this.addReviewOfSystems(pdf, report.content.reviewOfSystems, config.margins.left, yPosition);
     }
 
     // Past Medical History
@@ -85,7 +85,7 @@ export class PDFGeneratorService {
     }
 
     // Physician Signature
-    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, contentWidth, config.physicianName);
+    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, config.physicianName);
 
     // Footer
     if (config.includeFooter) {
@@ -112,7 +112,7 @@ export class PDFGeneratorService {
     const contentWidth = pdf.internal.pageSize.getWidth() - config.margins.left - config.margins.right;
 
     // Letterhead
-    yPosition = this.addLetterhead(pdf, config.margins.left, yPosition, contentWidth);
+    yPosition = this.addLetterhead(pdf, config.margins.left, yPosition);
 
     // Date
     pdf.setFontSize(12);
@@ -145,7 +145,7 @@ export class PDFGeneratorService {
     yPosition = this.addSection(pdf, 'Clinical Question', referral.clinicalQuestion, config.margins.left, yPosition, contentWidth);
 
     // Patient demographics
-    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition, contentWidth);
+    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition);
 
     // Relevant history
     if (referral.relevantHistory) {
@@ -194,7 +194,7 @@ export class PDFGeneratorService {
     const contentWidth = pdf.internal.pageSize.getWidth() - config.margins.left - config.margins.right;
 
     if (config.includeHeader) {
-      yPosition = this.addHeader(pdf, config.margins.left, yPosition, contentWidth);
+      yPosition = this.addHeader(pdf, config.margins.left, yPosition);
     }
 
     // Title
@@ -204,7 +204,7 @@ export class PDFGeneratorService {
     yPosition += 10;
 
     // Patient info
-    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition, contentWidth);
+    yPosition = this.addPatientDemographics(pdf, patient, config.margins.left, yPosition);
 
     // SOAP sections
     yPosition = this.addSection(pdf, 'Subjective', soapNote.subjective, config.margins.left, yPosition, contentWidth);
@@ -217,7 +217,7 @@ export class PDFGeneratorService {
     }
 
     // Physician Signature
-    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, contentWidth, config.physicianName);
+    yPosition = this.addSignatureBlock(pdf, config.margins.left, yPosition, config.physicianName);
 
     if (config.includeFooter) {
       this.addFooter(pdf, config);
@@ -226,7 +226,7 @@ export class PDFGeneratorService {
     return pdf.output('blob');
   }
 
-  private static addHeader(pdf: jsPDF, x: number, y: number, width: number): number {
+  private static addHeader(pdf: jsPDF, x: number, y: number): number {
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Medical Practice', x, y);
@@ -236,7 +236,7 @@ export class PDFGeneratorService {
     return y + 20;
   }
 
-  private static addLetterhead(pdf: jsPDF, x: number, y: number, width: number): number {
+  private static addLetterhead(pdf: jsPDF, x: number, y: number): number {
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Medical Practice', x, y);
@@ -257,7 +257,7 @@ export class PDFGeneratorService {
     return currentY;
   }
 
-  private static addPatientDemographics(pdf: jsPDF, patient: Patient, x: number, y: number, width: number): number {
+  private static addPatientDemographics(pdf: jsPDF, patient: Patient, x: number, y: number): number {
     y = this.checkPageBreak(pdf, y, 40);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -296,7 +296,7 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addReviewOfSystems(pdf: jsPDF, rosData: Record<string, any>, x: number, y: number, width: number): number {
+  private static addReviewOfSystems(pdf: jsPDF, rosData: Record<string, any>, x: number, y: number): number {
     y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -502,7 +502,7 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addSignatureBlock(pdf: jsPDF, x: number, y: number, width: number, physicianName?: string): number {
+  private static addSignatureBlock(pdf: jsPDF, x: number, y: number, physicianName?: string): number {
     y = this.checkPageBreak(pdf, y, 30);
     y += 20; // Add some spacing before the signature line
     

@@ -2,7 +2,7 @@
 // ABOUTME: Enhanced hook for investigation recommendations with fallback support
 // ABOUTME: Provides AI-powered recommendations with graceful degradation to clinical protocols
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { InvestigationRecommendation, RedFlag, ClinicalGuideline, DifferentialDiagnosis, Answer, ReviewOfSystems } from '@/types/medical';
 import { AIService } from '@/services/aiService';
 import { EnhancedInvestigationService } from '@/services/investigation/EnhancedInvestigationService';
@@ -28,6 +28,17 @@ export function useInvestigationRecommendations(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use refs to avoid continuous re-renders from new object references
+  const diffsRef = useRef(differentialDiagnoses);
+  const answersRef = useRef(answers);
+  const rosDataRef = useRef(rosData);
+
+  useEffect(() => {
+    diffsRef.current = differentialDiagnoses;
+    answersRef.current = answers;
+    rosDataRef.current = rosData;
+  }, [differentialDiagnoses, answers, rosData]);
+
   const fetchRecommendations = useCallback(async () => {
     try {
       setLoading(true);
@@ -38,26 +49,25 @@ export function useInvestigationRecommendations(
       try {
         const clinicalSupport = await AIService.generateClinicalDecisionSupport(
           chiefComplaint,
-          differentialDiagnoses,
-          answers,
-          rosData
+          diffsRef.current,
+          answersRef.current,
+          rosDataRef.current
         );
         
         setRecommendations(clinicalSupport.investigations || []);
         setRedFlags(clinicalSupport.redFlags || []);
         setGuidelines(clinicalSupport.guidelines || []);
         
-      } catch (aiError) {
+      } catch {
         
         // Fallback to enhanced investigation service
         const protocolRecommendations = EnhancedInvestigationService.generateSmartRecommendations(
           chiefComplaint,
-          differentialDiagnoses,
-          { answers, rosData }
+          { answers: answersRef.current, rosData: rosDataRef.current }
         );
         
         setRecommendations(protocolRecommendations);
-        setRedFlags(generateProtocolRedFlags(chiefComplaint, answers));
+        setRedFlags(generateProtocolRedFlags(chiefComplaint));
         setGuidelines(generateProtocolGuidelines(chiefComplaint));
         
         setError('AI service temporarily unavailable. Using evidence-based clinical protocols.');
@@ -67,13 +77,13 @@ export function useInvestigationRecommendations(
       setError('Failed to generate investigation recommendations');
       
       // Final fallback - basic recommendations
-      setRecommendations(getBasicRecommendations(chiefComplaint));
+      setRecommendations(getBasicRecommendations());
       setRedFlags([]);
       setGuidelines([]);
     } finally {
       setLoading(false);
     }
-  }, [chiefComplaint]); // answers/rosData/diagnoses are new object refs each render — only re-fetch when complaint changes
+  }, [chiefComplaint]);
 
   useEffect(() => {
     if (chiefComplaint) {
@@ -92,7 +102,7 @@ export function useInvestigationRecommendations(
 }
 
 // Helper functions for fallback recommendations
-function generateProtocolRedFlags(chiefComplaint: string, answers: Record<string, Answer>): RedFlag[] {
+function generateProtocolRedFlags(chiefComplaint: string): RedFlag[] {
   const redFlags: RedFlag[] = [];
   const complaint = chiefComplaint.toLowerCase();
   
@@ -144,7 +154,7 @@ function generateProtocolGuidelines(chiefComplaint: string): ClinicalGuideline[]
   return guidelines;
 }
 
-function getBasicRecommendations(chiefComplaint: string): InvestigationRecommendation[] {
+function getBasicRecommendations(): InvestigationRecommendation[] {
   return [
     {
       investigation: {

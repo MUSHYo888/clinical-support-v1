@@ -25,12 +25,12 @@ export class TreatmentManagementService {
     return conditionMedications.map(medication => {
       const interactions = this.checkDrugInteractions(medication.name, currentMedications);
       const contraindicated = this.isContraindicated(medication, patientData, allergies);
-      const alternatives = this.getAlternativeMedications(medication, condition);
+      const alternatives = this.getAlternativeMedications();
       
       return {
         medication,
-        rationale: this.generateMedicationRationale(medication, condition),
-        evidenceLevel: this.getMedicationEvidenceLevel(medication, condition),
+        rationale: this.generateMedicationRationale(medication),
+        evidenceLevel: this.getMedicationEvidenceLevel(medication),
         contraindicated,
         interactions,
         alternatives,
@@ -41,8 +41,7 @@ export class TreatmentManagementService {
 
   static getTreatmentPathway(
     condition: string,
-    severity: string,
-    patientFactors: any
+    severity: string
   ): TreatmentPathway {
     const pathways = this.getTreatmentPathways();
     const pathwayKey = `${condition.toLowerCase()}-${severity}`;
@@ -73,12 +72,11 @@ export class TreatmentManagementService {
   static generateDischargePlan(
     patientId: string,
     condition: string,
-    treatmentReceived: any,
     currentMedications: Medication[]
   ): DischargePlan {
-    const dischargeReadiness = this.assessDischargeReadiness(patientId, condition);
-    const instructions = this.generateDischargeInstructions(condition, treatmentReceived);
-    const followUp = this.generateFollowUpPlan(condition, treatmentReceived);
+    const dischargeReadiness = this.assessDischargeReadiness();
+    const instructions = this.generateDischargeInstructions();
+    const followUp = this.generateFollowUpPlan();
     
     // Determine continuing vs new medications based on duration
     const continuingMedications = currentMedications.filter(med => 
@@ -115,8 +113,7 @@ export class TreatmentManagementService {
   static generateTreatmentRecommendation(
     condition: string,
     severity: string,
-    patientData: any,
-    differentialDiagnoses: any[]
+    patientData: any
   ): TreatmentRecommendation {
     const medicationSuggestions = this.generateMedicationSuggestions(
       condition,
@@ -125,11 +122,11 @@ export class TreatmentManagementService {
       patientData.allergies || []
     );
     
-    const treatmentPathway = this.getTreatmentPathway(condition, severity, patientData);
+    const treatmentPathway = this.getTreatmentPathway(condition, severity);
     const nonPharmacological = this.getNonPharmacologicalTreatments(condition);
     const lifestyle = this.getLifestyleRecommendations(condition);
-    const prognosis = this.getPrognosisInformation(condition, severity, patientData);
-    const complications = this.getComplicationInformation(condition);
+    const prognosis = this.getPrognosisInformation();
+    const complications = this.getComplicationInformation();
     
     return {
       condition,
@@ -265,7 +262,7 @@ export class TreatmentManagementService {
     };
   }
 
-  private static generateMedicationRationale(medication: Medication, condition: string): string {
+  private static generateMedicationRationale(medication: Medication): string {
     const rationales: Record<string, string> = {
       'aspirin': 'Proven cardioprotective effects and stroke prevention',
       'lisinopril': 'First-line antihypertensive with cardiovascular benefits',
@@ -274,7 +271,7 @@ export class TreatmentManagementService {
     return rationales[medication.genericName.toLowerCase()] || 'Evidence-based therapy for condition';
   }
 
-  private static getMedicationEvidenceLevel(medication: Medication, condition: string): 'A' | 'B' | 'C' | 'D' {
+  private static getMedicationEvidenceLevel(medication: Medication): 'A' | 'B' | 'C' | 'D' {
     // Simplified evidence level assignment
     const highEvidenceMeds = ['aspirin', 'lisinopril', 'atorvastatin'];
     return highEvidenceMeds.includes(medication.genericName.toLowerCase()) ? 'A' : 'B';
@@ -298,7 +295,7 @@ export class TreatmentManagementService {
     );
   }
 
-  private static getAlternativeMedications(medication: Medication, condition: string): Medication[] {
+  private static getAlternativeMedications(): Medication[] {
     // Simplified alternative medication logic
     return [];
   }
@@ -328,7 +325,7 @@ export class TreatmentManagementService {
     };
   }
 
-  private static assessDischargeReadiness(patientId: string, condition: string) {
+  private static assessDischargeReadiness() {
     // Simplified discharge readiness assessment
     return {
       clinicalStability: true,
@@ -340,7 +337,7 @@ export class TreatmentManagementService {
     };
   }
 
-  private static generateDischargeInstructions(condition: string, treatment: any): DischargeInstruction[] {
+  private static generateDischargeInstructions(): DischargeInstruction[] {
     return [
       {
         category: 'medication',
@@ -360,7 +357,7 @@ export class TreatmentManagementService {
     ];
   }
 
-  private static generateFollowUpPlan(condition: string, treatment: any) {
+  private static generateFollowUpPlan() {
     return {
       primaryCare: {
         timeframe: '1-2 weeks',
@@ -412,7 +409,7 @@ export class TreatmentManagementService {
     return recommendations[condition.toLowerCase()] || ['Healthy diet', 'Regular exercise', 'Adequate sleep'];
   }
 
-  private static getPrognosisInformation(condition: string, severity: string, patientData: any) {
+  private static getPrognosisInformation() {
     return {
       shortTerm: 'Good with appropriate treatment',
       longTerm: 'Excellent with lifestyle modifications',
@@ -420,7 +417,7 @@ export class TreatmentManagementService {
     };
   }
 
-  private static getComplicationInformation(condition: string) {
+  private static getComplicationInformation() {
     return {
       potential: ['Disease progression', 'Medication side effects'],
       prevention: ['Regular monitoring', 'Lifestyle modifications'],
