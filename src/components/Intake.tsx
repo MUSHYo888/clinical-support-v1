@@ -401,15 +401,7 @@ export default function Intake() {
               {/* STEP 4: PMH */}
               {step === 4 && (
                 <div className="space-y-8 [&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
-                  <PastMedicalHistory 
-                    onSubmit={(data) => {
-                      updateField('pmhData', data);
-                      dispatch({ type: 'SET_PMH_DATA', payload: data });
-                      toast.success("PMH data recorded.");
-                      handleNext();
-                    }}
-                    onBack={() => handlePrev()}
-                  />
+                  <PastMedicalHistory />
                 </div>
               )}
 
@@ -423,9 +415,7 @@ export default function Intake() {
               {/* STEP 6: Physical Examination */}
               {step === 6 && (
                 <div className="[&_.p-6]:px-0 [&_.shadow-lg]:shadow-none">
-                  <PhysicalExamination
-                    chiefComplaint={formData.chiefComplaint}
-                  />
+              <PhysicalExamination />
                 </div>
               )}
 

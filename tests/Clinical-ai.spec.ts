@@ -77,9 +77,6 @@ test('Clinical AI Assessment Flow - Batch Save', async ({ page }) => {
   await clickSymptom('Vision changes', true);
   await clickSymptom('Hearing loss', true);
 
-  // 🚨 FREEZE TIME: This will pause the test and open a debug window
-  await page.pause();
-
   await expect(page.getByText('3 Positive')).toBeVisible({ timeout: 5000 });
   await expect(page.getByText('2 Negative')).toBeVisible({ timeout: 5000 });
 

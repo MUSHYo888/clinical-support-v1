@@ -2,12 +2,12 @@
 // ABOUTME: System health monitoring component with comprehensive AI service diagnostics
 // ABOUTME: Enhanced monitoring for OpenRouter API, edge functions, and clinical workflows
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, AlertTriangle, RefreshCw, Database, Brain, Zap, Activity } from 'lucide-react';
+import { CheckCircle, AlertTriangle, RefreshCw, Database, Brain, Zap, Activity } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AIService } from '@/services/aiService';
 
@@ -43,7 +43,7 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
   const [healthResults, setHealthResults] = useState<HealthCheckResult[]>([]);
   const [systemScore, setSystemScore] = useState<number>(0);
 
-  const checkSystemHealth = async () => {
+  const checkSystemHealth = useCallback(async () => {
     setChecking(true);
     setHealthResults([]);
     const results: HealthCheckResult[] = [];
@@ -203,24 +203,11 @@ export function SystemHealth({ onAIServiceFixed }: SystemHealthProps) {
     setHealthResults(results);
     setLastChecked(new Date());
     setChecking(false);
-  };
+  }, [onAIServiceFixed]);
 
   useEffect(() => {
     checkSystemHealth();
-  }, []);
-
-  const getStatusIcon = (serviceStatus: string) => {
-    switch (serviceStatus) {
-      case 'healthy':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'checking':
-        return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-    }
-  };
+  }, [checkSystemHealth]);
 
   const getStatusBadge = (serviceStatus: string) => {
     switch (serviceStatus) {

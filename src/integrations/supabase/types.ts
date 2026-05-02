@@ -281,6 +281,63 @@ export type Database = {
           }
         ]
       }
+      patient_outcomes: {
+        Row: {
+          assessment_id: string
+          cost_efficiency_score: number | null
+          created_at: string
+          diagnostic_accuracy_score: number | null
+          follow_up_date: string | null
+          id: string
+          outcome: string | null
+          patient_id: string
+          patient_satisfaction_score: number | null
+          treatment_effectiveness_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          cost_efficiency_score?: number | null
+          created_at?: string
+          diagnostic_accuracy_score?: number | null
+          follow_up_date?: string | null
+          id?: string
+          outcome?: string | null
+          patient_id: string
+          patient_satisfaction_score?: number | null
+          treatment_effectiveness_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          cost_efficiency_score?: number | null
+          created_at?: string
+          diagnostic_accuracy_score?: number | null
+          follow_up_date?: string | null
+          id?: string
+          outcome?: string | null
+          patient_id?: string
+          patient_satisfaction_score?: number | null
+          treatment_effectiveness_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_outcomes_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_outcomes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       patients: {
         Row: {
           age: number

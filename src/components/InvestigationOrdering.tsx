@@ -2,7 +2,7 @@
 // ABOUTME: Investigation ordering component with AI-powered recommendations and cost-benefit analysis
 // ABOUTME: Provides intelligent investigation selection with clinical rationale and safety checks
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,6 @@ import {
   Heart, 
   Wind, 
   AlertTriangle, 
-  Clock, 
   DollarSign,
   Brain,
   CheckCircle2,
@@ -58,11 +57,7 @@ export function InvestigationOrdering({
     error: aiError
   } = useInvestigationRecommendations(chiefComplaint, differentialDiagnoses, answers, rosData);
 
-  useEffect(() => {
-    generateInvestigationIntelligence();
-  }, [recommendations]);
-
-  const generateInvestigationIntelligence = async () => {
+  const generateInvestigationIntelligence = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -84,7 +79,11 @@ export function InvestigationOrdering({
     } finally {
       setLoading(false);
     }
-  };
+  }, [recommendations, chiefComplaint, answers, rosData, differentialDiagnoses]);
+
+  useEffect(() => {
+    generateInvestigationIntelligence();
+  }, [generateInvestigationIntelligence]);
 
   const getInvestigationIcon = (type: string) => {
     switch (type) {
@@ -198,7 +197,7 @@ export function InvestigationOrdering({
             </h3>
             
             <div className="grid gap-4">
-              {investigationIntelligence.map((item, index) => (
+              {investigationIntelligence.map((item) => (
                 <Card key={item.investigation.id} className="border-l-4 border-l-teal-500">
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-4">

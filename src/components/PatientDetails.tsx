@@ -2,13 +2,12 @@
 // ABOUTME: Patient details view showing patient info and assessment history
 // ABOUTME: Loads from database when clicking a patient name in dashboard or patient list
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Activity, ArrowLeft, Calendar, FileText, User, UserPlus, ClipboardList, Loader2, Trash2 } from 'lucide-react';
+import { Activity, ArrowLeft, Calendar, FileText, User, ClipboardList, Loader2, Trash2 } from 'lucide-react';
 import { Patient } from '@/types/medical';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

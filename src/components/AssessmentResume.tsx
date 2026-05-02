@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Play, Trash2, AlertCircle } from 'lucide-react';
-import { useMedical } from '@/context/MedicalContext';
-import { useAssessment, useAssessmentAnswers } from '@/hooks/useAssessment';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InProgressAssessment {
@@ -27,7 +25,6 @@ interface AssessmentResumeProps {
 }
 
 export function AssessmentResume({ onResumeAssessment, onNewAssessment }: AssessmentResumeProps) {
-  const { state } = useMedical();
   const [inProgressAssessments, setInProgressAssessments] = useState<InProgressAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

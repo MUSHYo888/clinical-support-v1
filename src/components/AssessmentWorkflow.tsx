@@ -457,7 +457,7 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
         <div className="p-6">
           <Card className="max-w-6xl mx-auto shadow-sm">
             <CardContent className="p-6">
-              <PhysicalExamination chiefComplaint={chiefComplaint} />
+              <PhysicalExamination />
               <div className="flex justify-between pt-6 border-t mt-6">
                 <Button variant="outline" onClick={() => {
                   setCurrentView(3);
@@ -571,7 +571,6 @@ export function AssessmentWorkflow(props: AssessmentWorkflowProps) {
           onRestart={props.onBack}
           onReturnHome={() => window.location.href = '/'}
           assessmentId={state.currentAssessment?.id}
-          patientId={state.currentPatient?.id}
         />
       )}
     >

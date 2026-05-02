@@ -1,7 +1,7 @@
 // ABOUTME: Referral letter generation component with specialty recommendations and templates
 // ABOUTME: Handles creating professional medical referral letters with AI-powered clinical intelligence
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,17 +61,7 @@ export function ReferralLetterGenerator({
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [letterPreview, setLetterPreview] = useState('');
 
-  useEffect(() => {
-    generateRecommendations();
-  }, []);
-
-  useEffect(() => {
-    if (specialty) {
-      generateTemplateContent();
-    }
-  }, [specialty, chiefComplaint, differentials]);
-
-  const generateRecommendations = async () => {
+  const generateRecommendations = useCallback(async () => {
     try {
       setGenerating(true);
       
@@ -95,9 +85,9 @@ export function ReferralLetterGenerator({
     } finally {
       setGenerating(false);
     }
-  };
+  }, [chiefComplaint, differentials, answers, rosData]);
 
-  const generateTemplateContent = async () => {
+  const generateTemplateContent = useCallback(async () => {
     try {
       const template = ReferralLetterTemplates.getTemplate(specialty, chiefComplaint);
       
@@ -105,27 +95,26 @@ export function ReferralLetterGenerator({
       setSuggestedQuestions(template.suggestedQuestions);
       
       // Auto-populate fields if empty
-      if (!clinicalQuestion && template.suggestedQuestions.length > 0) {
-        setClinicalQuestion(template.suggestedQuestions[0]);
-      }
-      
-      if (!relevantHistory) {
-        setRelevantHistory(template.relevantHistoryTemplate);
-      }
-      
-      if (!examinationFindings) {
-        setExaminationFindings(template.examinationTemplate);
-      }
-      
-      // Generate letter preview
-      updateLetterPreview();
-      
+      setClinicalQuestion(prev => prev || (template.suggestedQuestions.length > 0 ? template.suggestedQuestions[0] : prev));
+      setRelevantHistory(prev => prev || template.relevantHistoryTemplate);
+      setExaminationFindings(prev => prev || template.examinationTemplate);
     } catch (error) {
       console.error('Error generating template content:', error);
     }
-  };
+  }, [specialty, chiefComplaint]);
 
-  const updateLetterPreview = () => {
+  useEffect(() => {
+    generateRecommendations();
+  }, [generateRecommendations]);
+
+  useEffect(() => {
+    if (specialty) {
+      generateTemplateContent();
+    }
+  }, [specialty, generateTemplateContent]);
+
+  useEffect(() => {
+    if (!specialty) return;
     const preview = ReferralLetterTemplates.generateLetterPreview({
       specialty,
       patient,
@@ -137,7 +126,7 @@ export function ReferralLetterGenerator({
       urgency
     });
     setLetterPreview(preview);
-  };
+  }, [specialty, patient, chiefComplaint, clinicalQuestion, relevantHistory, examinationFindings, investigationsCompleted, urgency]);
 
   const handleSpecialtySelect = (selectedSpecialty: string) => {
     setSpecialty(selectedSpecialty);
@@ -145,7 +134,6 @@ export function ReferralLetterGenerator({
 
   const handleSuggestedQuestionSelect = (question: string) => {
     setClinicalQuestion(question);
-    updateLetterPreview();
   };
 
   const handleSaveReferral = async () => {
@@ -244,7 +232,7 @@ export function ReferralLetterGenerator({
         status: 'draft'
       };
 
-      const pdfBlob = await PDFGeneratorService.generateReferralLetterPDF(referralData, patient, { physicianName });
+      const pdfBlob = await PDFGeneratorService.generateReferralLetterPDF(referralData, patient);
       
       // Create download link
       const url = URL.createObjectURL(pdfBlob);
@@ -293,7 +281,7 @@ export function ReferralLetterGenerator({
                 <h3 className="font-semibold">AI-Recommended Specialties</h3>
               </div>
               <div className="grid gap-2">
-                {recommendedSpecialties.slice(0, 3).map((rec, index) => (
+                {recommendedSpecialties.slice(0, 3).map((rec) => (
                   <div
                     key={rec.specialty}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -392,7 +380,6 @@ export function ReferralLetterGenerator({
                   value={clinicalQuestion}
                   onChange={(e) => {
                     setClinicalQuestion(e.target.value);
-                    updateLetterPreview();
                   }}
                   placeholder="What specific question or evaluation are you requesting?"
                   rows={3}
@@ -423,7 +410,6 @@ export function ReferralLetterGenerator({
                   value={relevantHistory}
                   onChange={(e) => {
                     setRelevantHistory(e.target.value);
-                    updateLetterPreview();
                   }}
                   placeholder="Brief relevant history..."
                   rows={3}
@@ -437,7 +423,6 @@ export function ReferralLetterGenerator({
                   value={examinationFindings}
                   onChange={(e) => {
                     setExaminationFindings(e.target.value);
-                    updateLetterPreview();
                   }}
                   placeholder="Relevant physical examination findings..."
                   rows={2}
@@ -451,7 +436,6 @@ export function ReferralLetterGenerator({
                   value={investigationsCompleted}
                   onChange={(e) => {
                     setInvestigationsCompleted(e.target.value);
-                    updateLetterPreview();
                   }}
                   placeholder="ECG, blood tests, imaging..."
                   rows={2}

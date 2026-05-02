@@ -14,7 +14,8 @@ import {
   Calculator, 
   TrendingUp, 
   AlertTriangle, 
-  Shield, 
+  Shield,
+  
   Activity,
   Heart,
   Thermometer,

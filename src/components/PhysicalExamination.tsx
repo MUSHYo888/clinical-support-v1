@@ -12,12 +12,6 @@ import { PhysicalExamData } from '@/types/physical-exam';
 import { useMedical } from '@/context/MedicalContext';
 import { HeartPulse, User, Activity, Bone, PersonStanding, CheckCircle, AlertCircle } from 'lucide-react';
 
-interface PhysicalExaminationProps {
-  chiefComplaint?: string;
-  onComplete?: (data: any) => void;
-  onBack?: () => void;
-}
-
 const examSystems = [
   {
     name: 'general',
@@ -124,7 +118,7 @@ const BODY_ZONES = [
   { id: 'general', label: 'General/Skin', icon: PersonStanding }
 ];
 
-export function PhysicalExamination({ chiefComplaint, onComplete, onBack }: PhysicalExaminationProps) {
+export function PhysicalExamination() {
   const { state, dispatch } = useMedical();
 
   const initializeSystems = () => {

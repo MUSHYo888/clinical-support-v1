@@ -16,7 +16,6 @@ interface AssessmentErrorRecoveryProps {
   onRestart: () => void;
   onReturnHome: () => void;
   assessmentId?: string;
-  patientId?: string;
 }
 
 export function AssessmentErrorRecovery({
@@ -24,8 +23,7 @@ export function AssessmentErrorRecovery({
   onRetry,
   onRestart,
   onReturnHome,
-  assessmentId,
-  patientId
+  assessmentId
 }: AssessmentErrorRecoveryProps) {
   const { state } = useMedical();
   const [downloading, setDownloading] = useState(false);

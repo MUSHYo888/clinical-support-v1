@@ -7,13 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { 
   Pill, 
   AlertTriangle, 
   CheckCircle, 
-  Clock, 
   User, 
   FileText,
   Heart,
@@ -21,7 +19,7 @@ import {
   Shield,
   Calendar
 } from 'lucide-react';
-import { TreatmentRecommendation, DrugInteraction, DischargePlan } from '@/types/treatment-management';
+import { DischargePlan } from '@/types/treatment-management';
 import { TreatmentManagementService } from '@/services/treatmentManagementService';
 
 interface TreatmentRecommendationsProps {

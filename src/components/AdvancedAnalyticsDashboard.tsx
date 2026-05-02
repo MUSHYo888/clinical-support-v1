@@ -1,7 +1,7 @@
 // ABOUTME: Advanced analytics dashboard for clinical performance and patient outcomes
 // ABOUTME: Provides comprehensive insights with real-time data visualization and clinical metrics
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,6 @@ import {
   Users,
   Clock,
   Target,
-  AlertTriangle,
   Activity,
   Download,
   Zap,
@@ -67,11 +66,7 @@ export function AdvancedAnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [Recharts, setRecharts] = useState<any>(null);
 
-  useEffect(() => {
-    loadAnalyticsData();
-  }, [timeRange]);
-
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -94,7 +89,11 @@ export function AdvancedAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [loadAnalyticsData]);
 
   useEffect(() => {
     if ((activeTab === 'performance' || activeTab === 'outcomes') && !Recharts) {
@@ -110,15 +109,6 @@ export function AdvancedAnalyticsDashboard() {
       console.error('Failed to export analytics:', error);
       toast.error('Failed to export analytics report');
     }
-  };
-
-  const getMetricTrend = (current: number, previous: number) => {
-    const change = ((current - previous) / previous) * 100;
-    return {
-      percentage: Math.abs(change).toFixed(1),
-      isIncrease: change > 0,
-      isSignificant: Math.abs(change) > 5
-    };
   };
 
   const {
@@ -144,12 +134,6 @@ export function AdvancedAnalyticsDashboard() {
     stable: '#3b82f6',
     declined: '#ef4444',
     resolved: '#10b981'
-  };
-
-  const impactColors = {
-    high: '#ef4444',
-    medium: '#f59e0b',
-    low: '#10b981'
   };
 
   if (loading) {

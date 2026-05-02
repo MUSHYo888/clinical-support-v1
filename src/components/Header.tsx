@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Settings, LogOut, Menu, X } from 'lucide-react';
+import { User, Settings, LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';

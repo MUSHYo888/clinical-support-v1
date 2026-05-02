@@ -1,9 +1,9 @@
 // ABOUTME: Component for collecting patient's past medical history with structured social history
 // ABOUTME: Component for collecting patient's past medical history with minimalist, high-efficiency clinical workflow
 // ABOUTME: Handles medical conditions, surgeries, medications, allergies, family history, and structured social fields
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,27 +23,12 @@ interface SocialHistoryData {
   otherNotes: string;
 }
 
-interface PastMedicalHistoryData {
-  conditions: string[];
-  surgeries: string[];
-  medications: string[];
-  allergies: string[];
-  familyHistory: string;
-  socialHistory: string;
-  socialHistoryStructured?: SocialHistoryData;
-}
-
 const commonConditions = [
   'Hypertension', 'Diabetes', 'Asthma', 'Heart Disease', 'Stroke',
   'Cancer', 'Kidney Disease', 'Liver Disease', 'Depression', 'Anxiety'
 ];
 
-interface PMHProps {
-  onSubmit?: (data: unknown) => void;
-  onBack?: () => void;
-}
-
-export function PastMedicalHistory({ onSubmit, onBack }: PMHProps) {
+export function PastMedicalHistory() {
   const { state, dispatch } = useMedical();
 
   const [activeConditions, setActiveConditions] = useState<string[]>(state.pmhData?.conditions || []);
@@ -116,7 +101,7 @@ export function PastMedicalHistory({ onSubmit, onBack }: PMHProps) {
     setFamilyMembers(prev => prev.filter((_, i) => i !== index));
   };
 
-  const compileData = () => {
+  const compileData = useCallback(() => {
     const socialSummary = [
       socialData.smokingStatus && `Smoking: ${socialData.smokingStatus}${socialData.packYears ? ` (${socialData.packYears} pack-years)` : ''}`,
       socialData.alcoholUse && `Alcohol: ${socialData.alcoholUse}${socialData.alcoholDetails ? ` - ${socialData.alcoholDetails}` : ''}`,
@@ -138,18 +123,17 @@ export function PastMedicalHistory({ onSubmit, onBack }: PMHProps) {
       socialHistory: socialSummary,
       socialHistoryStructured: socialData,
     };
-  };
+  }, [socialData, activeConditions, conditionNotes, familyMembers, familyNotes, surgeries, medications, allergies]);
 
   // Auto-sync with global medical context
   useEffect(() => {
     const timer = setTimeout(() => {
       const compiledData = compileData();
-      // @ts-ignore - socialHistoryStructured is an extended local type
       dispatch({ type: 'SET_PMH_DATA', payload: compiledData });
     }, 500);
     
     return () => clearTimeout(timer);
-  }, [activeConditions, conditionNotes, surgeries, medications, allergies, familyMembers, familyNotes, socialData, dispatch]);
+  }, [compileData, dispatch]);
 
   return (
     <div className="w-full">
