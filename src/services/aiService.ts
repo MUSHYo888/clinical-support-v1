@@ -6,6 +6,7 @@ import { AdvancedClinicalSupport, SeverityScore, ClinicalAlert } from '@/types/c
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
 import { FallbackDataService } from './fallback/FallbackDataService';
 import { withRetry } from '@/utils/withRetry';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface DDxResponse {
   diagnosis?: string;
