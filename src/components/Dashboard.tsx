@@ -27,8 +27,26 @@ export function Dashboard({ onNewPatient, onViewPatients, onTestAI, onViewAnalyt
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
 
-  // Simple admin check based on email domain (Update as needed)
-  const isAdmin = user?.email?.includes('admin') || false;
+  // Server-side admin check via user_roles table
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('user_roles' as never)
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
+      .then(({ data }: { data: unknown }) => {
+        if (!cancelled) setIsAdmin(!!data);
+      });
+    return () => { cancelled = true; };
+  }, [user]);
 
   // Realtime subscriptions for live updates
   useEffect(() => {
