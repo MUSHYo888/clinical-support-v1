@@ -4,6 +4,7 @@
 import { 
   CostBenefitAnalysis, 
   EvidenceBasedPathway, 
+  InvestigationStep,
   ContraindicationCheck, 
   FollowUpAlgorithm,
   InvestigationIntelligence,
@@ -42,7 +43,7 @@ export class InvestigationIntelligenceService {
 
   static checkContraindications(
     investigationId: string,
-    patientData: any,
+    patientData: unknown,
     medicalHistory: string[] = []
   ): ContraindicationCheck {
     return ContraindicationChecker.checkContraindications(
@@ -125,7 +126,7 @@ export class InvestigationIntelligenceService {
   static generateInvestigationIntelligence(
     investigationId: string,
     chiefComplaint: string,
-    patientData: any
+    patientData: unknown
   ): InvestigationIntelligence {
     const costBenefit = this.analyzeCostBenefit(investigationId);
     const pathway = this.getEvidenceBasedPathway(chiefComplaint);
@@ -147,18 +148,26 @@ export class InvestigationIntelligenceService {
   }
 
   // Helper methods
-  private static createPathwayFromProtocol(protocol: any, pathwayId: string): EvidenceBasedPathway {
+  private static createPathwayFromProtocol(
+    protocol: {
+      name: string;
+      evidenceLevel: 'A' | 'B' | 'C' | 'D';
+      source: string;
+      investigations: { name: string; timing: string; priority?: number }[];
+    }, 
+    pathwayId: string
+  ): EvidenceBasedPathway {
     return {
       pathwayId,
       name: protocol.name,
       condition: pathwayId.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
       evidenceLevel: protocol.evidenceLevel,
       guidelineSource: protocol.source,
-      steps: protocol.investigations.map((inv: any, index: number) => ({
+      steps: protocol.investigations.map((inv, index: number) => ({
         stepNumber: index + 1,
         investigationType: this.getInvestigationType(inv.name),
         investigationName: inv.name,
-        timing: inv.timing,
+        timing: inv.timing as InvestigationStep['timing'],
         prerequisites: index > 0 ? [protocol.investigations[index - 1].name] : [],
         expectedOutcomes: this.getExpectedOutcomes(inv.name),
         nextStepCriteria: this.getNextStepCriteria(inv.name)
@@ -227,7 +236,7 @@ export class InvestigationIntelligenceService {
     return `Based on ${investigationName} results and clinical correlation`;
   }
 
-  private static estimateTimeframe(investigations: any[]): string {
+  private static estimateTimeframe(investigations: { timing: string }[]): string {
     const urgentCount = investigations.filter(inv => inv.timing === 'immediate' || inv.timing === 'urgent').length;
     if (urgentCount > 0) return '2-6 hours for urgent investigations';
     return '1-2 days for routine investigations';
@@ -275,7 +284,7 @@ export class InvestigationIntelligenceService {
     costBenefit: CostBenefitAnalysis,
     contraindications: ContraindicationCheck
   ): InvestigationRecommendation {
-    let recommendation: any = 'recommended';
+    let recommendation: InvestigationRecommendation['recommendation'] = 'recommended';
     let strength = 7;
 
     // Adjust based on contraindications

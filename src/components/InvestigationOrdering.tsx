@@ -26,12 +26,18 @@ import {
 } from 'lucide-react';
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
+import { DifferentialDiagnosis, Answer, ReviewOfSystems, InvestigationRecommendation } from '@/types/medical';
+import { InvestigationIntelligence } from '@/types/investigation-intelligence';
+
+type EnrichedInvestigation = InvestigationRecommendation & {
+  intelligence: InvestigationIntelligence;
+};
 
 interface InvestigationOrderingProps {
   chiefComplaint: string;
-  differentialDiagnoses: any[];
-  answers: Record<string, any>;
-  rosData: Record<string, any>;
+  differentialDiagnoses: DifferentialDiagnosis[];
+  answers: Record<string, Answer>;
+  rosData: ReviewOfSystems;
   onSubmit: (selectedInvestigations: string[], notes: string) => void;
   onBack: () => void;
 }
@@ -46,7 +52,7 @@ export function InvestigationOrdering({
 }: InvestigationOrderingProps) {
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
   const [clinicalNotes, setClinicalNotes] = useState('');
-  const [investigationIntelligence, setInvestigationIntelligence] = useState<any[]>([]);
+  const [investigationIntelligence, setInvestigationIntelligence] = useState<EnrichedInvestigation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const {
@@ -66,8 +72,7 @@ export function InvestigationOrdering({
           const intelligence = InvestigationIntelligenceService.generateInvestigationIntelligence(
             rec.investigation.id,
             chiefComplaint,
-            { answers, rosData },
-            differentialDiagnoses
+            { answers, rosData }
           );
           return { ...rec, intelligence };
         })
@@ -79,7 +84,7 @@ export function InvestigationOrdering({
     } finally {
       setLoading(false);
     }
-  }, [recommendations, chiefComplaint, answers, rosData, differentialDiagnoses]);
+  }, [recommendations, chiefComplaint, answers, rosData]);
 
   useEffect(() => {
     generateInvestigationIntelligence();

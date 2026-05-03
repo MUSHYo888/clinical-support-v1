@@ -53,7 +53,7 @@ export default function PatientView() {
             lastAssessment: undefined
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error fetching patient:", error);
         toast.error("Failed to load patient data.");
       } finally {

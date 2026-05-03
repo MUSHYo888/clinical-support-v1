@@ -2,8 +2,18 @@
 // ABOUTME: Clinical utility functions for calculations and formatting
 // ABOUTME: Provides reusable clinical calculation and formatting utilities
 
+export interface VitalSignsInput {
+  systolicBP?: string | number;
+  diastolicBP?: string | number;
+  heartRate?: string | number;
+  respiratoryRate?: string | number;
+  temperature?: string | number;
+  oxygenSaturation?: string | number;
+  [key: string]: unknown;
+}
+
 export class ClinicalUtils {
-  static formatVitalSigns(vitals: any) {
+  static formatVitalSigns(vitals: VitalSignsInput) {
     return {
       bloodPressure: `${vitals.systolicBP || 120}/${vitals.diastolicBP || 80} mmHg`,
       heartRate: `${vitals.heartRate || 80} bpm`,
@@ -25,7 +35,7 @@ export class ClinicalUtils {
     return 'Obese';
   }
 
-  static formatMedication(medication: any): string {
+  static formatMedication(medication: { name: string; dosage: string; frequency: string }): string {
     return `${medication.name} ${medication.dosage} ${medication.frequency}`;
   }
 

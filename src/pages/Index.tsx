@@ -11,7 +11,7 @@ import { ChiefComplaintSelector } from '@/components/ChiefComplaintSelector';
 import { PatientList } from '@/components/PatientList';
 import { AssessmentResume } from '@/components/AssessmentResume';
 import { AssessmentErrorRecovery } from '@/components/AssessmentErrorRecovery';
-import { Patient } from '@/types/medical';
+import { Patient, Assessment } from '@/types/medical';
 import { useMedical } from '@/hooks/useMedical';
 import { useCreateAssessment } from '@/hooks/useAssessment';
 import { useUpdatePatientAssessment } from '@/hooks/usePatients';
@@ -87,7 +87,7 @@ const Index = () => {
             id: assessment.id,
             patientId: assessment.patient_id,
             chiefComplaint: assessment.chief_complaint,
-          status: assessment.status as any,
+            status: assessment.status as Assessment['status'],
             currentStep: assessment.current_step,
             createdAt: assessment.created_at,
             updatedAt: assessment.updated_at,
@@ -233,7 +233,7 @@ const Index = () => {
           id: assessment.id,
           patientId: assessment.patient_id,
           chiefComplaint: assessment.chief_complaint,
-          status: assessment.status as any,
+          status: assessment.status as Assessment['status'],
           currentStep: assessment.current_step,
           createdAt: assessment.created_at,
           updatedAt: assessment.updated_at

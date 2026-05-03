@@ -2,8 +2,36 @@
 // ABOUTME: Enhanced investigation database service with comprehensive clinical data
 // ABOUTME: Provides cost analysis, contraindication data, and evidence-based investigation protocols
 
+export interface InvestigationCostData {
+  cost: number;
+  category: 'very-low' | 'low' | 'moderate' | 'high' | 'very-high';
+  diagnosticYield: number;
+  clinicalBenefit: number;
+  turnaroundTime: string;
+}
+
+export interface ContraindicationWarning {
+  category: 'renal' | 'allergy' | 'safety' | 'cardiac' | 'radiation';
+  description: string;
+  riskLevel: 'low' | 'moderate' | 'high';
+  monitoring: string[];
+}
+
+export interface ContraindicationData {
+  absolute: string[];
+  relative: string[];
+  warnings: ContraindicationWarning[];
+}
+
+export interface EvidenceBasedProtocol {
+  name: string;
+  evidenceLevel: 'A' | 'B' | 'C';
+  source: string;
+  investigations: { name: string; timing: string; priority: number }[];
+}
+
 export class InvestigationDatabaseService {
-  static getCostDatabase(): Record<string, any> {
+  static getCostDatabase(): Record<string, InvestigationCostData> {
     return {
       'ecg': { 
         cost: 50, 
@@ -92,7 +120,7 @@ export class InvestigationDatabaseService {
     };
   }
 
-  static getContraindicationDatabase(): Record<string, any> {
+  static getContraindicationDatabase(): Record<string, ContraindicationData> {
     return {
       'ct-contrast': {
         absolute: [
@@ -201,7 +229,7 @@ export class InvestigationDatabaseService {
     };
   }
 
-  static getEvidenceBasedProtocols(): Record<string, any> {
+  static getEvidenceBasedProtocols(): Record<string, EvidenceBasedProtocol> {
     return {
       'chest-pain': {
         name: 'Chest Pain Investigation Protocol',

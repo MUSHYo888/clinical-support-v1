@@ -33,7 +33,7 @@ interface ClinicalInsight {
   confidence: number;
 }
 
-interface PerformanceDataPoint {
+export interface PerformanceDataPoint {
   date?: string;
   time?: string;
   specialty?: string;
@@ -327,7 +327,7 @@ export class AdvancedAnalyticsService {
     return outcomes;
   }
 
-  static async getRealtimeMetrics(): Promise<any> {
+  static async getRealtimeMetrics(): Promise<AnalyticsMetrics | null> {
     try {
       // This would set up real-time subscriptions to database changes
       // For demonstration, return current metrics

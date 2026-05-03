@@ -5,13 +5,38 @@
 import { InvestigationDatabaseService } from './InvestigationDatabaseService';
 import { CostBenefitAnalyzer } from './CostBenefitAnalyzer';
 import { ContraindicationChecker } from './ContraindicationChecker';
-import { InvestigationRecommendation } from '@/types/investigation-intelligence';
+import { 
+  InvestigationRecommendation, 
+  CostBenefitAnalysis, 
+  ContraindicationCheck 
+} from '@/types/investigation-intelligence';
+
+export interface EnhancedInvestigationResult {
+  investigation: {
+    id: string;
+    name: string;
+    type: string;
+    category: string;
+    indication: string;
+    urgency: 'routine' | 'urgent' | 'stat';
+    cost: string;
+    rationale: string;
+  };
+  priority: number;
+  clinicalRationale: string;
+  contraindications: string[];
+  intelligence: {
+    costBenefit: CostBenefitAnalysis;
+    contraindications: ContraindicationCheck;
+    overallRecommendation: InvestigationRecommendation;
+  };
+}
 
 export class EnhancedInvestigationService {
   static generateSmartRecommendations(
     chiefComplaint: string,
-    patientData: any
-  ): any[] {
+    patientData: unknown
+  ): EnhancedInvestigationResult[] {
     const protocols = InvestigationDatabaseService.getEvidenceBasedProtocols();
     const complaint = chiefComplaint.toLowerCase();
     
@@ -30,7 +55,7 @@ export class EnhancedInvestigationService {
     }
 
     // Generate recommendations based on protocol
-    return relevantProtocol.investigations.map((inv: any) => {
+    return relevantProtocol.investigations.map((inv: { name: string; timing: string; priority: number }) => {
       const investigation = {
         id: inv.name.toLowerCase().replace(/\s+/g, '-'),
         name: inv.name,
@@ -55,8 +80,8 @@ export class EnhancedInvestigationService {
     });
   }
 
-  private static getDefaultRecommendations(chiefComplaint: string): any[] {
-    const defaultInvestigations = [
+  private static getDefaultRecommendations(chiefComplaint: string): EnhancedInvestigationResult[] {
+    const defaultInvestigations: EnhancedInvestigationResult['investigation'][] = [
       {
         id: 'fbc',
         name: 'Full Blood Count',
@@ -173,7 +198,7 @@ export class EnhancedInvestigationService {
     return `Relevant investigation for ${chiefComplaint}`;
   }
 
-  private static generateClinicalRationale(investigation: any, chiefComplaint: string): string {
+  private static generateClinicalRationale(investigation: { rationale: string }, chiefComplaint: string): string {
     return `${investigation.rationale} - particularly relevant for ${chiefComplaint} presentation`;
   }
 
@@ -191,8 +216,12 @@ export class EnhancedInvestigationService {
 
   private static generateInvestigationIntelligence(
     investigationId: string,
-    patientData: any
-  ): any {
+    patientData: unknown
+  ): {
+    costBenefit: CostBenefitAnalysis;
+    contraindications: ContraindicationCheck;
+    overallRecommendation: InvestigationRecommendation;
+  } {
     const costBenefit = CostBenefitAnalyzer.analyzeCostBenefit(investigationId);
 
     const contraindications = ContraindicationChecker.checkContraindications(
@@ -220,8 +249,8 @@ export class EnhancedInvestigationService {
   }
 
   private static determineRecommendation(
-    costBenefit: any,
-    contraindications: any
+    costBenefit: CostBenefitAnalysis,
+    contraindications: ContraindicationCheck
   ): 'strongly-recommended' | 'recommended' | 'consider' | 'not-recommended' | 'contraindicated' {
     if (contraindications.riskAssessment === 'contraindicated') {
       return 'contraindicated';
@@ -242,7 +271,7 @@ export class EnhancedInvestigationService {
     return 'not-recommended';
   }
 
-  private static calculateRecommendationStrength(costBenefit: any, contraindications: any): number {
+  private static calculateRecommendationStrength(costBenefit: CostBenefitAnalysis, contraindications: ContraindicationCheck): number {
     let strength = costBenefit.clinicalBenefit;
     
     // Adjust for contraindications

@@ -16,7 +16,7 @@ import { ClinicalReportService } from '@/services/reporting/ClinicalReportServic
 import { PDFGeneratorService } from '@/services/reporting/PDFGeneratorService';
 import { SpecialtyRecommendationService } from '@/services/SpecialtyRecommendationService';
 import { ReferralLetterTemplates } from '@/services/ReferralLetterTemplates';
-import { Patient, DifferentialDiagnosis } from '@/types/medical';
+import { Patient, DifferentialDiagnosis, Answer, ReviewOfSystems } from '@/types/medical';
 import { ReferralLetter } from '@/types/reporting';
 
 interface ReferralLetterGeneratorProps {
@@ -24,8 +24,8 @@ interface ReferralLetterGeneratorProps {
   patient: Patient;
   chiefComplaint: string;
   differentials: DifferentialDiagnosis[];
-  answers: Record<string, any>;
-  rosData: Record<string, any>;
+  answers: Record<string, Answer>;
+  rosData: ReviewOfSystems;
   onSave: (referral: ReferralLetter) => void;
   onCancel: () => void;
 }

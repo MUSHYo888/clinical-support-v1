@@ -12,6 +12,15 @@ interface PastMedicalHistoryData {
   allergies: string[];
   familyHistory: string;
   socialHistory: string;
+  socialHistoryStructured?: {
+    smokingStatus: string;
+    packYears: string;
+    alcoholUse: string;
+    alcoholDetails: string;
+    occupation: string;
+    livingSituation: string;
+    otherNotes: string;
+  };
 }
 
 
@@ -33,7 +42,7 @@ type MedicalAction =
   | { type: 'ADD_ANSWER'; payload: { questionId: string; answer: Answer } }
   | { type: 'SET_ALL_ANSWERS'; payload: Record<string, Answer> }
   | { type: 'SET_ROS_DATA'; payload: ReviewOfSystems }
-  | { type: 'UPDATE_ROS'; payload: { system: string; data: any } }
+  | { type: 'UPDATE_ROS'; payload: { system: string; data: { positive: string[]; negative: string[]; notes?: string } } }
   | { type: 'SET_PMH_DATA'; payload: PastMedicalHistoryData }
   | { type: 'SET_PE_DATA'; payload: PhysicalExamData }
   | { type: 'RESET_ASSESSMENT' };
@@ -115,7 +124,7 @@ export interface MedicalContextType {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-const MedicalContext = createContext<MedicalContextType | undefined>(undefined);
+export const MedicalContext = createContext<MedicalContextType | undefined>(undefined);
 
 export function MedicalProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(medicalReducer, initialState);

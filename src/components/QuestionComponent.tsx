@@ -5,11 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
-import { Question } from '@/types/medical';
+import { Question, Answer } from '@/types/medical';
 
 interface QuestionComponentProps {
   question: Question;
-  onSubmit: (questionId: string, answer: any) => void;
+  onSubmit: (questionId: string, answer: Omit<Answer, 'questionId'>) => void;
   questionNumber: number;
   totalQuestions: number;
 }

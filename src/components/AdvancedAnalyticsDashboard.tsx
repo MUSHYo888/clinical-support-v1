@@ -9,6 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
+import {
   BarChart3,
   TrendingUp,
   TrendingDown,
@@ -23,7 +40,7 @@ import {
   FileText,
   Award
 } from 'lucide-react';
-import { AdvancedAnalyticsService } from '@/services/AdvancedAnalyticsService';
+import { AdvancedAnalyticsService, PerformanceDataPoint } from '@/services/AdvancedAnalyticsService';
 import { toast } from 'sonner';
 
 interface AnalyticsMetrics {
@@ -62,9 +79,8 @@ export function AdvancedAnalyticsDashboard() {
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
   const [patientOutcomes, setPatientOutcomes] = useState<PatientOutcome[]>([]);
   const [clinicalInsights, setClinicalInsights] = useState<ClinicalInsight[]>([]);
-  const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [performanceData, setPerformanceData] = useState<PerformanceDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [Recharts, setRecharts] = useState<any>(null);
 
   const loadAnalyticsData = useCallback(async () => {
     try {
@@ -73,8 +89,8 @@ export function AdvancedAnalyticsDashboard() {
       // Simulate analytics data loading
       const [metricsData, outcomesData, insightsData, performanceChartData] = await Promise.all([
         AdvancedAnalyticsService.getAnalyticsMetrics(timeRange),
-        AdvancedAnalyticsService.getPatientOutcomes(timeRange),
-        AdvancedAnalyticsService.getClinicalInsights(timeRange),
+        AdvancedAnalyticsService.getPatientOutcomes(),
+        AdvancedAnalyticsService.getClinicalInsights(),
         AdvancedAnalyticsService.getPerformanceData(timeRange)
       ]);
 
@@ -95,12 +111,6 @@ export function AdvancedAnalyticsDashboard() {
     loadAnalyticsData();
   }, [loadAnalyticsData]);
 
-  useEffect(() => {
-    if ((activeTab === 'performance' || activeTab === 'outcomes') && !Recharts) {
-      import('recharts').then(mod => setRecharts(mod));
-    }
-  }, [activeTab, Recharts]);
-
   const exportAnalytics = async () => {
     try {
       await AdvancedAnalyticsService.exportAnalyticsReport(timeRange);
@@ -110,24 +120,6 @@ export function AdvancedAnalyticsDashboard() {
       toast.error('Failed to export analytics report');
     }
   };
-
-  const {
-    BarChart,
-    Bar,
-    LineChart,
-    Line,
-    PieChart,
-    Pie,
-    Cell,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    AreaChart,
-    Area
-  } = (Recharts || {}) as any;
 
   const outcomeColors = {
     improved: '#22c55e',
@@ -312,11 +304,6 @@ export function AdvancedAnalyticsDashboard() {
 
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-6">
-          {!Recharts ? (
-            <div className="flex h-[300px] items-center justify-center">
-              <BarChart3 className="h-8 w-8 animate-pulse text-primary" />
-            </div>
-          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -402,7 +389,6 @@ export function AdvancedAnalyticsDashboard() {
               </CardContent>
             </Card>
           </div>
-          )}
         </TabsContent>
 
         {/* Patient Outcomes Tab */}
@@ -413,11 +399,6 @@ export function AdvancedAnalyticsDashboard() {
                 <CardTitle>Outcome Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                {!Recharts ? (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <BarChart3 className="h-8 w-8 animate-pulse text-primary" />
-                  </div>
-                ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -446,7 +427,6 @@ export function AdvancedAnalyticsDashboard() {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-                )}
               </CardContent>
             </Card>
 

@@ -3,13 +3,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { ClinicalReport, ReferralLetter, SOAPNote, ProgressNote, ReportTemplate, ReportContent, ReferralLetterContent } from '@/types/reporting';
+import { Json } from '@/integrations/supabase/types';
 
 export class ClinicalReportService {
   static async createClinicalReport(
     assessmentId: string,
     reportType: 'clinical_summary' | 'investigation_summary' | 'treatment_plan' | 'discharge_summary',
     title: string,
-    content: any,
+    content: ReportContent,
     format: 'pdf' | 'html' | 'docx' = 'pdf'
   ): Promise<ClinicalReport> {
     const { data, error } = await supabase
@@ -18,7 +19,7 @@ export class ClinicalReportService {
         assessment_id: assessmentId,
         report_type: reportType,
         title,
-        content,
+        content: content as unknown as Json,
         format,
         generated_by: 'AI Assistant'
       })
@@ -40,7 +41,7 @@ export class ClinicalReportService {
       generatedBy: data.generated_by,
       format: data.format as 'pdf' | 'html' | 'docx',
       filePath: data.file_path,
-      metadata: (data.metadata as any) || {}
+      metadata: (data.metadata as Record<string, unknown>) || {}
     };
   }
 
@@ -48,7 +49,7 @@ export class ClinicalReportService {
     assessmentId: string,
     specialty: string,
     clinicalQuestion: string,
-    letterContent: any,
+    letterContent: ReferralLetterContent,
     urgency: 'routine' | 'urgent' | 'stat' = 'routine'
   ): Promise<ReferralLetter> {
     const { data, error } = await supabase
@@ -57,7 +58,7 @@ export class ClinicalReportService {
         assessment_id: assessmentId,
         specialty,
         clinical_question: clinicalQuestion,
-        letter_content: letterContent,
+        letter_content: letterContent as unknown as Json,
         urgency
       })
       .select()
@@ -203,7 +204,7 @@ export class ClinicalReportService {
       generatedBy: report.generated_by,
       format: report.format as 'pdf' | 'html' | 'docx',
       filePath: report.file_path,
-      metadata: (report.metadata as any) || {}
+      metadata: (report.metadata as Record<string, unknown>) || {}
     }));
   }
 
@@ -259,7 +260,7 @@ export class ClinicalReportService {
       name: template.name,
       type: template.type as 'clinical_report' | 'referral_letter' | 'soap_note' | 'progress_note',
       specialty: template.specialty,
-      templateContent: template.template_content as any,
+      templateContent: template.template_content as unknown,
       defaultTemplate: template.default_template,
       createdAt: template.created_at,
       updatedAt: template.updated_at,
@@ -272,7 +273,7 @@ export class ClinicalReportService {
     status: 'draft' | 'sent' | 'acknowledged',
     sentAt?: string
   ): Promise<void> {
-    const updateData: any = { status };
+    const updateData: { status: 'draft' | 'sent' | 'acknowledged'; sent_at?: string } = { status };
     if (sentAt) {
       updateData.sent_at = sentAt;
     }

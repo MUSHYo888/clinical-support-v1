@@ -1,7 +1,7 @@
 // ABOUTME: AI-powered specialty recommendation service for medical referrals
 // ABOUTME: Analyzes clinical data to suggest appropriate medical specialties with confidence scores
 
-import { DifferentialDiagnosis } from '@/types/medical';
+import { DifferentialDiagnosis, Answer, ReviewOfSystems } from '@/types/medical';
 
 interface SpecialtyRecommendation {
   specialty: string;
@@ -84,8 +84,8 @@ export class SpecialtyRecommendationService {
   static async getSpecialtyRecommendations(
     chiefComplaint: string,
     differentials: DifferentialDiagnosis[],
-    answers: Record<string, any>,
-    rosData: Record<string, any>
+    answers: Record<string, Answer>,
+    rosData: ReviewOfSystems
   ): Promise<SpecialtyRecommendation[]> {
     
     const recommendations: SpecialtyRecommendation[] = [];
@@ -93,9 +93,9 @@ export class SpecialtyRecommendationService {
     // Combine all text data for analysis
     const clinicalText = [
       chiefComplaint,
-      Object.values(answers).join(' '),
+      Object.values(answers).map(a => `${a.value} ${a.notes || ''}`).join(' '),
       Object.values(rosData).map(ros => 
-        typeof ros === 'object' ? Object.values(ros).join(' ') : ros
+        [...(ros.positive || []), ...(ros.negative || []), ros.notes || ''].join(' ')
       ).join(' '),
       differentials.map(d => d.condition).join(' ')
     ].join(' ').toLowerCase();
@@ -259,7 +259,7 @@ export class SpecialtyRecommendationService {
   static getUrgencyRecommendation(
     specialty: string,
     differentials: DifferentialDiagnosis[],
-    answers: Record<string, any>
+    answers: Record<string, Answer>
   ): 'routine' | 'urgent' | 'stat' {
     
     // Check for emergency conditions
@@ -294,7 +294,7 @@ export class SpecialtyRecommendationService {
     }
 
     // Check answers for red flags
-    const answerText = Object.values(answers).join(' ').toLowerCase();
+    const answerText = Object.values(answers).map(a => `${a.value} ${a.notes || ''}`).join(' ').toLowerCase();
     const redFlags = ['severe', 'worsening', 'progressive', 'acute', 'sudden'];
     
     if (redFlags.some(flag => answerText.includes(flag))) {

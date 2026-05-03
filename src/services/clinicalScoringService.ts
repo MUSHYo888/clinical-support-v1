@@ -124,7 +124,7 @@ export class ClinicalScoringService {
 
   static assessOverallRisk(
     age: number,
-    vitalSigns: any,
+    vitalSigns: { systolicBP?: number | string; heartRate?: number | string; [key: string]: unknown },
     comorbidities: string[]
   ): RiskAssessment {
     const riskFactors: RiskFactor[] = [];
@@ -142,7 +142,8 @@ export class ClinicalScoringService {
     }
 
     // Vital signs risk
-    if (vitalSigns.systolicBP < 90 || vitalSigns.systolicBP > 180) {
+    const sysBP = Number(vitalSigns.systolicBP) || 120;
+    if (sysBP < 90 || sysBP > 180) {
       riskFactors.push({
         factor: 'Abnormal blood pressure',
         present: true,
@@ -152,7 +153,8 @@ export class ClinicalScoringService {
       totalRiskScore += 3;
     }
 
-    if (vitalSigns.heartRate > 100 || vitalSigns.heartRate < 50) {
+    const hr = Number(vitalSigns.heartRate) || 80;
+    if (hr > 100 || hr < 50) {
       riskFactors.push({
         factor: 'Abnormal heart rate',
         present: true,

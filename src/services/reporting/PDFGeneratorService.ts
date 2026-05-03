@@ -5,7 +5,8 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ClinicalReport, ReferralLetter, SOAPNote, PDFExportOptions } from '@/types/reporting';
-import { Patient, DifferentialDiagnosis } from '@/types/medical';
+import { Patient, DifferentialDiagnosis, ReviewOfSystems, PastMedicalHistoryData } from '@/types/medical';
+import { PhysicalExamData } from '@/types/physical-exam';
 
 export class PDFGeneratorService {
   private static defaultOptions: PDFExportOptions = {
@@ -296,7 +297,7 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addReviewOfSystems(pdf: jsPDF, rosData: Record<string, any>, x: number, y: number): number {
+  private static addReviewOfSystems(pdf: jsPDF, rosData: ReviewOfSystems, x: number, y: number): number {
     y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -314,7 +315,7 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addPastMedicalHistory(pdf: jsPDF, pmhData: any, x: number, y: number, width: number): number {
+  private static addPastMedicalHistory(pdf: jsPDF, pmhData: PastMedicalHistoryData, x: number, y: number, width: number): number {
     y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -350,7 +351,7 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addPhysicalExamination(pdf: jsPDF, peData: any, x: number, y: number, width: number): number {
+  private static addPhysicalExamination(pdf: jsPDF, peData: PhysicalExamData, x: number, y: number, width: number): number {
     y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -384,7 +385,7 @@ export class PDFGeneratorService {
     }
 
     if (peData.systems) {
-      Object.entries(peData.systems).forEach(([sys, data]: [string, any]) => {
+      Object.entries(peData.systems).forEach(([sys, data]) => {
         y = this.checkPageBreak(pdf, y, 10);
         pdf.setFont('helvetica', 'bold');
         const sysName = sys.charAt(0).toUpperCase() + sys.slice(1) + ':';
@@ -431,7 +432,18 @@ export class PDFGeneratorService {
     return y + 5;
   }
 
-  private static addClinicalPlan(pdf: jsPDF, cdsData: any, x: number, y: number, width: number): number {
+  private static addClinicalPlan(
+    pdf: jsPDF, 
+    cdsData: {
+      investigation_plan?: { selected?: string[]; results?: { name: string; value: string | number }[] };
+      treatment_plan?: { medications?: string[]; nonPharmacological?: string[]; followUp?: string };
+      clinical_notes?: string;
+      [key: string]: unknown;
+    }, 
+    x: number, 
+    y: number, 
+    width: number
+  ): number {
     y = this.checkPageBreak(pdf, y, 15);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
@@ -462,7 +474,7 @@ export class PDFGeneratorService {
     if (cdsData.investigation_plan?.selected?.length) printSection('Investigations Ordered:', cdsData.investigation_plan.selected);
     
     if (cdsData.investigation_plan?.results?.length) {
-      const results = cdsData.investigation_plan.results.map((r: any) => `${r.name}: ${r.value}`);
+      const results = cdsData.investigation_plan.results.map(r => `${r.name}: ${r.value}`);
       printSection('Lab/Investigation Results:', results);
     }
 

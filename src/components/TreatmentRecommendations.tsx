@@ -20,13 +20,13 @@ import {
   Calendar
 } from 'lucide-react';
 import { DischargePlan } from '@/types/treatment-management';
-import { TreatmentManagementService } from '@/services/treatmentManagementService';
+import { TreatmentManagementService, PatientClinicalData } from '@/services/treatmentManagementService';
+import { Patient } from '@/types/medical';
 
 interface TreatmentRecommendationsProps {
   condition: string;
   severity: string;
-  patientData: any;
-  differentialDiagnoses: any[];
+  patientData: Patient;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -35,7 +35,6 @@ export function TreatmentRecommendations({
   condition,
   severity,
   patientData,
-  differentialDiagnoses: _differentialDiagnoses,
   onBack,
   onComplete
 }: TreatmentRecommendationsProps) {
@@ -46,8 +45,7 @@ export function TreatmentRecommendations({
   const treatmentRec = TreatmentManagementService.generateTreatmentRecommendation(
     condition,
     severity,
-    patientData,
-    differentialDiagnoses
+    patientData as unknown as PatientClinicalData
   );
 
   const handleMedicationToggle = (medicationId: string) => {

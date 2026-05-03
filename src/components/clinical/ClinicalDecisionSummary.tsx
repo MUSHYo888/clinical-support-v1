@@ -6,8 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Microscope, Pill, FileText, DollarSign } from 'lucide-react';
 
+interface ClinicalDecisionData {
+  investigation_plan?: {
+    selected?: string[];
+    rationale?: string;
+    estimatedCost?: number;
+  };
+  treatment_plan?: {
+    medications?: string[];
+    nonPharmacological?: string[];
+    followUp?: string;
+  };
+  clinical_notes?: string;
+}
+
 interface ClinicalDecisionSummaryProps {
-  clinicalDecisionData: any;
+  clinicalDecisionData: ClinicalDecisionData | null | undefined;
 }
 
 export function ClinicalDecisionSummary({ clinicalDecisionData }: ClinicalDecisionSummaryProps) {

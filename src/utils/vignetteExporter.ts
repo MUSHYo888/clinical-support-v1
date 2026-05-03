@@ -1,14 +1,16 @@
+import { Answer, ReviewOfSystems } from '@/types/medical';
+
 export const generateClinicalVignette = (
   chiefComplaint: string,
-  answers: any,
-  rosData: any
+  answers: Record<string, Answer> | null | undefined,
+  rosData: ReviewOfSystems | null | undefined
 ): string => {
   let vignette = `A patient presents with a chief complaint of ${chiefComplaint}.\n\n`;
 
   // 1. History of Present Illness
   vignette += `HISTORY OF PRESENT ILLNESS:\n`;
   if (answers && Object.keys(answers).length > 0) {
-    const hpiDetails = Object.entries(answers).map(([, a]: [string, any]) => {
+    const hpiDetails = Object.entries(answers).map(([, a]: [string, Answer]) => {
       const val = a.value || '';
       const notes = a.notes ? `(${a.notes})` : '';
       return `${val} ${notes}`.trim();
@@ -23,7 +25,7 @@ export const generateClinicalVignette = (
   const positiveROS: string[] = [];
   
   if (rosData && Object.keys(rosData).length > 0) {
-    Object.values(rosData).forEach((data: any) => {
+    Object.values(rosData).forEach((data) => {
       if (data && data.positive && Array.isArray(data.positive)) {
         positiveROS.push(...data.positive);
       }

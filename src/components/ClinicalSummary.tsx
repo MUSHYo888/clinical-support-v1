@@ -5,7 +5,7 @@ import { Printer, Download, ArrowLeft, Loader2 } from 'lucide-react';
 import { useMedical } from '@/hooks/useMedical';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { DifferentialDiagnosis } from '@/types/medical';
+import { DifferentialDiagnosis, Answer } from '@/types/medical';
 import { useGetClinicalDecisionSupport } from '@/hooks/useGetClinicalDecisionSupport';
 import { useNavigate } from 'react-router-dom';
 
@@ -70,7 +70,7 @@ export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }:
 
   // Formatting helpers
   const hpi = hpiNote || Object.values(state.answers || {})
-    ?.map((a: any) => {
+    ?.map((a: Answer) => {
       let text = String(a?.value || '');
       if (a?.notes) text += ` (${a.notes})`;
       return text;
@@ -79,7 +79,7 @@ export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }:
     ?.join('. ') || '';
 
   const positiveRos = Object.entries(state.rosData || {})
-    ?.map(([system, data]: [string, any]) => {
+    ?.map(([system, data]: [string, { positive: string[]; negative: string[]; notes?: string }]) => {
       if (data?.positive && Array.isArray(data.positive) && data.positive.length > 0) {
         return `${system}: ${data.positive.join(', ')}`;
       }
@@ -90,7 +90,7 @@ export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }:
   const pmh = state.pmhData;
   const vitals = state.peData?.vitalSigns;
   const peSystems = Object.entries(state.peData?.systems || {})
-    ?.map(([system, data]: [string, any]) => {
+    ?.map(([system, data]: [string, { normal: boolean; findings: string[]; notes: string }]) => {
       if (data?.normal) return `${system}: Normal`;
       const findings = Array.isArray(data?.findings) ? data.findings.join(', ') : '';
       const notes = data?.notes ? ` - ${data.notes}` : '';
@@ -98,6 +98,9 @@ export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }:
       return null;
     })
     ?.filter(Boolean) || [];
+
+  const investigationPlan = cdsData?.investigation_plan as { selected?: string[]; rationale?: string; estimatedCost?: number; results?: { name: string; value: string | number }[] } | undefined;
+  const treatmentPlan = cdsData?.treatment_plan as { medications?: string[]; nonPharmacological?: string[]; followUp?: string } | undefined;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -247,21 +250,21 @@ export function ClinicalSummary({ onBack, chiefComplaint, hpiNote, onComplete }:
                   <div className="flex items-center text-gray-500 mt-2">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading clinical plan...
                   </div>
-                ) : cdsData?.clinical_notes || cdsData?.investigation_plan?.selected?.length || cdsData?.treatment_plan?.medications?.length ? (
+                ) : cdsData?.clinical_notes || investigationPlan?.selected?.length || treatmentPlan?.medications?.length ? (
                   <div className="mt-1 space-y-3">
-                    {cdsData?.investigation_plan?.selected?.length > 0 && (
+                    {investigationPlan?.selected?.length > 0 && (
                       <div>
-                        <span className="font-medium">Investigations:</span> {cdsData.investigation_plan.selected.join(', ')}
+                        <span className="font-medium">Investigations:</span> {investigationPlan.selected.join(', ')}
                       </div>
                     )}
-                    {cdsData?.treatment_plan?.medications?.length > 0 && (
+                    {treatmentPlan?.medications?.length > 0 && (
                       <div>
-                        <span className="font-medium">Medications:</span> {cdsData.treatment_plan.medications.join(', ')}
+                        <span className="font-medium">Medications:</span> {treatmentPlan.medications.join(', ')}
                       </div>
                     )}
-                    {cdsData?.treatment_plan?.followUp && (
+                    {treatmentPlan?.followUp && (
                       <div>
-                        <span className="font-medium">Follow up:</span> {cdsData.treatment_plan.followUp}
+                        <span className="font-medium">Follow up:</span> {treatmentPlan.followUp}
                       </div>
                     )}
                     {cdsData?.clinical_notes && (

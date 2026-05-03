@@ -47,7 +47,7 @@ export class AssessmentService {
       id: data.id,
       patientId: data.patient_id,
       chiefComplaint: data.chief_complaint,
-      status: data.status as any,
+      status: data.status as Assessment['status'],
       currentStep: data.current_step,
       createdAt: data.created_at,
       updatedAt: data.updated_at
@@ -338,7 +338,7 @@ export class AssessmentService {
       id: data.id,
       patientId: data.patient_id,
       chiefComplaint: data.chief_complaint,
-      status: data.status as any,
+      status: data.status as Assessment['status'],
       currentStep: data.current_step,
       createdAt: data.created_at,
       updatedAt: data.updated_at

@@ -2,6 +2,9 @@
 // ABOUTME: Type definitions for clinical reporting and documentation system
 // ABOUTME: Defines interfaces for PDF reports, referral letters, SOAP notes, and progress notes
 
+import { ReviewOfSystems, PastMedicalHistoryData } from '@/types/medical';
+import { PhysicalExamData } from '@/types/physical-exam';
+
 export interface ClinicalReport {
   id: string;
   assessmentId: string;
@@ -12,7 +15,7 @@ export interface ClinicalReport {
   generatedBy?: string;
   format: 'pdf' | 'html' | 'docx';
   filePath?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface ReportContent {
@@ -25,9 +28,9 @@ export interface ReportContent {
   };
   chiefComplaint: string;
   historyPresentIllness: string[];
-  reviewOfSystems: Record<string, any>;
-  pastMedicalHistory?: any;
-  physicalExamination?: any;
+  reviewOfSystems: ReviewOfSystems;
+  pastMedicalHistory?: PastMedicalHistoryData;
+  physicalExamination?: PhysicalExamData;
   investigations?: string[];
   differentialDiagnosis: Array<{
     condition: string;
@@ -36,7 +39,7 @@ export interface ReportContent {
   }>;
   treatmentPlan?: string[];
   followUpInstructions?: string[];
-  clinicalDecisionData?: any;
+  clinicalDecisionData?: Record<string, unknown>;
 }
 
 export interface ReferralLetter {
@@ -111,7 +114,7 @@ export interface ReportTemplate {
   name: string;
   type: 'clinical_report' | 'referral_letter' | 'soap_note' | 'progress_note';
   specialty?: string;
-  templateContent: any;
+  templateContent: unknown;
   defaultTemplate: boolean;
   createdAt: string;
   updatedAt: string;

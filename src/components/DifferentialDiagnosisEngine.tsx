@@ -70,7 +70,6 @@ export function DifferentialDiagnosisEngine({
 }: DifferentialDiagnosisEngineProps) {
   const { state } = useMedical();
   const [diagnoses, setDiagnoses] = useState<DifferentialDiagnosis[]>([]);
-  const [recommendations, setRecommendations] = useState<ClinicalRecommendations | null>(null);
   const [riskStratification, setRiskStratification] = useState<RiskStratification | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +129,7 @@ export function DifferentialDiagnosisEngine({
           if (assessmentId && data?.differentialDiagnoses && data.differentialDiagnoses.length > 0) {
             try {
               await supabase.from('differential_diagnoses').delete().eq('assessment_id', assessmentId);
-              const insertData = data.differentialDiagnoses.map((d: any) => ({
+              const insertData = data.differentialDiagnoses.map((d: DifferentialDiagnosis) => ({
                 assessment_id: assessmentId,
                 condition_name: d.condition,
                 probability: d.probability,
@@ -152,7 +151,6 @@ export function DifferentialDiagnosisEngine({
       }
 
       setDiagnoses(data?.differentialDiagnoses || []);
-      setRecommendations(data?.clinicalRecommendations || null);
       setRiskStratification(data?.riskStratification || null);
 
       if (onDiagnosisGenerated) {
@@ -193,7 +191,6 @@ export function DifferentialDiagnosisEngine({
       };
 
       setDiagnoses(fallbackData.differentialDiagnoses as DifferentialDiagnosis[]);
-      setRecommendations(fallbackData.clinicalRecommendations);
       setRiskStratification(fallbackData.riskStratification as RiskStratification);
 
       if (errorMessage.includes('timeout')) {
@@ -220,12 +217,6 @@ export function DifferentialDiagnosisEngine({
     setHasAttempted(false);
     setError(null);
     generateDifferentialDiagnosis();
-  };
-
-  const getProbabilityColor = (probability: number) => {
-    if (probability >= 70) return 'bg-red-500';
-    if (probability >= 50) return 'bg-yellow-500';
-    return 'bg-green-500';
   };
 
   const getUrgencyIcon = (urgency: string) => {

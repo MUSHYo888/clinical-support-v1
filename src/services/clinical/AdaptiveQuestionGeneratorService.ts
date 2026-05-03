@@ -2,7 +2,7 @@
 // ABOUTME: Generates targeted follow-up questions based on Phase 1 answers and identified concerns
 
 import { Question, Answer } from '@/types/medical';
-import { AnswerAnalysis } from './AnswerAnalysisService';
+import { AnswerAnalysis, Phase2Trigger } from './AnswerAnalysisService';
 import { supabase } from '@/integrations/supabase/client';
 import { ClinicalUtils } from '@/utils/clinicalUtils';
 
@@ -66,7 +66,17 @@ export class AdaptiveQuestionGeneratorService {
       throw new Error('No questions returned from AI service');
     }
 
-    return data.questions.map((q: any) => ({
+    return data.questions.map((q: {
+      text: string;
+      type?: Question['type'];
+      options?: string[];
+      category?: string;
+      required?: boolean;
+      priority?: 1 | 2 | 3 | 4 | 5;
+      redFlag?: boolean;
+      rationale?: string;
+      trigger?: string;
+    }) => ({
       id: ClinicalUtils.generateUUID(),
       text: q.text,
       type: q.type || 'multiple-choice-with-text',
@@ -177,7 +187,7 @@ export class AdaptiveQuestionGeneratorService {
     return questions.slice(0, 5);
   }
 
-  private static createQuestionFromTrigger(trigger: any): Question | null {
+  private static createQuestionFromTrigger(trigger: Phase2Trigger): Question | null {
     const baseQuestion = {
       id: ClinicalUtils.generateUUID(),
       phase: 2 as const,

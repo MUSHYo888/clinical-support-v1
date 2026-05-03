@@ -63,10 +63,10 @@ export interface Contraindication {
 }
 
 export interface Warning {
-  category: 'allergy' | 'pregnancy' | 'renal' | 'hepatic' | 'cardiac' | 'medication' | 'other';
+  category: 'allergy' | 'pregnancy' | 'renal' | 'hepatic' | 'cardiac' | 'medication' | 'safety' | 'radiation' | 'other';
   description: string;
   riskLevel: 'low' | 'moderate' | 'high';
-  monitoringRequired: string[];
+  monitoring: string[];
 }
 
 export interface Precaution {

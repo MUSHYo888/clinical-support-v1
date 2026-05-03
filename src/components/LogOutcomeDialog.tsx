@@ -53,9 +53,10 @@ export function LogOutcomeDialog({ assessmentId, patientId, onSuccess }: LogOutc
       setIsOpen(false);
       if (onSuccess) onSuccess();
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to log outcome:', err);
-      toast.error(err.message || 'Failed to log patient outcome');
+      const error = err as Error;
+      toast.error(error.message || 'Failed to log patient outcome');
     } finally {
       setLoading(false);
     }

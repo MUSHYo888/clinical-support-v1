@@ -122,7 +122,7 @@ export function PhysicalExamination() {
   const { state, dispatch } = useMedical();
 
   const initializeSystems = () => {
-    const initial: Record<string, any> = {};
+    const initial: PhysicalExamData['systems'] = {};
     examSystems.forEach(sys => {
       initial[sys.name] = { normal: true, findings: [], notes: '' };
     });

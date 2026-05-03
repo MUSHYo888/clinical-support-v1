@@ -50,6 +50,39 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
+// --- Types ---
+export interface Resource {
+  site: string;
+  url: string;
+}
+
+export interface Differential {
+  name: string;
+  confidence: number;
+  resources?: Resource[];
+}
+
+export interface SoapNote {
+  id: number;
+  date: string;
+  preview: string;
+}
+
+export interface PatientCase {
+  id: string;
+  assessmentId: string;
+  patientId: string;
+  realPatientId: string;
+  name: string;
+  age: number;
+  gender: string;
+  date: string;
+  chiefComplaint: string;
+  status: string;
+  differentials: Differential[];
+  soapNotes: SoapNote[];
+}
+
 // --- KPI Card Component & Types ---
 type Tone = "default" | "primary" | "success" | "warning" | "danger";
 type Size = "sm" | "md" | "lg";
@@ -195,15 +228,15 @@ export default function NewMedicalDashboard() {
   const [activeFilter, setActiveFilter] = useState("All Cases");
   const [currentRotation, setCurrentRotation] = useState<string>("Internal Medicine");
   const [searchQueryPatients, setSearchQueryPatients] = useState("");
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<PatientCase[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(true);
   const [showHandoff, setShowHandoff] = useState(false);
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);
-  const [teachingCase, setTeachingCase] = useState<any | null>(null);
+  const [teachingCase, setTeachingCase] = useState<PatientCase | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [vignetteText, setVignetteText] = useState("");
   const [showStudyHub, setShowStudyHub] = useState(false);
-  const [selectedStudyPatient, setSelectedStudyPatient] = useState<any | null>(null);
+  const [selectedStudyPatient, setSelectedStudyPatient] = useState<PatientCase | null>(null);
   const [showToolkit, setShowToolkit] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tasks, setTasks] = useState([
@@ -244,7 +277,14 @@ export default function NewMedicalDashboard() {
         if (error) throw error;
 
         if (data) {
-          const mapped = data.map((a: any) => {
+          const mapped = data.map((a: {
+            id: string;
+            chief_complaint: string;
+            status: string;
+            updated_at: string;
+            patients: { id: string; name: string; age: number; gender: string; patient_id: string } | { id: string; name: string; age: number; gender: string; patient_id: string }[];
+            differential_diagnoses: { condition_name: string; probability: number }[];
+          }) => {
             const patientData = Array.isArray(a.patients) ? a.patients[0] : a.patients;
             return {
               id: patientData?.id,
@@ -257,7 +297,7 @@ export default function NewMedicalDashboard() {
               date: new Date(a.updated_at).toLocaleDateString(),
               chiefComplaint: a.chief_complaint,
               status: a.status === 'completed' ? 'Finalized' : (a.status === 'in-progress' ? 'In Progress' : 'Incomplete'),
-              differentials: (a.differential_diagnoses || []).map((d: any) => ({
+              differentials: (a.differential_diagnoses || []).map((d) => ({
                 name: d.condition_name,
                 confidence: d.probability,
                 resources: []
@@ -591,7 +631,7 @@ export default function NewMedicalDashboard() {
                                   Baseline Assessment
                                 </h4>
                                 <div className="space-y-3">
-                                  {patient.differentials && patient.differentials.map((diff: any, idx: number) => (
+                                  {patient.differentials && patient.differentials.map((diff: Differential, idx: number) => (
                                     <div key={idx} className="flex flex-col gap-1">
                                       <div className="flex justify-between text-sm">
                                         <span className="font-medium text-foreground">{diff.name}</span>
@@ -631,7 +671,7 @@ export default function NewMedicalDashboard() {
                                 </div>
                               ) : patient.soapNotes && patient.soapNotes.length > 0 ? (
                                 <div className="space-y-3 pl-2 border-l-2 border-muted ml-1">
-                                  {patient.soapNotes.map((note: any) => (
+                                  {patient.soapNotes.map((note: SoapNote) => (
                                     <div key={note.id} className="relative">
                                       <div className="absolute w-2.5 h-2.5 bg-primary rounded-full -left-[14px] top-1.5 border-2 border-background" />
                                       <div className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors cursor-pointer shadow-sm">
@@ -811,7 +851,7 @@ export default function NewMedicalDashboard() {
                     <h3 className="text-xl font-bold text-foreground">{selectedStudyPatient?.name}</h3>
                     <p className="text-muted-foreground">{selectedStudyPatient?.chiefComplaint}</p>
                   </div>
-                  {selectedStudyPatient?.differentials?.map((diff: any, idx: number) => (
+                  {selectedStudyPatient?.differentials?.map((diff: Differential, idx: number) => (
                     <Card key={idx} className="overflow-hidden">
                       <CardHeader className="bg-muted/30 pb-4">
                         <div className="flex justify-between items-center">
@@ -826,7 +866,7 @@ export default function NewMedicalDashboard() {
                             Reference Toolkit
                           </h4>
                           <div className="flex flex-wrap gap-2">
-                            {diff.resources?.map((res: any, rIdx: number) => (
+                            {diff.resources?.map((res: Resource, rIdx: number) => (
                               <a key={rIdx} href={res.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs rounded-full hover:bg-secondary/80 transition-colors shadow-sm">
                                 {res.site}
                                 <ExternalLink className="h-3 w-3" />

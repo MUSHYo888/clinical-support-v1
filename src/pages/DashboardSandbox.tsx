@@ -183,8 +183,38 @@ function KpiCard({
   );
 }
 
+// --- Types ---
+export interface Resource {
+  site: string;
+  url: string;
+}
+
+export interface Differential {
+  name: string;
+  confidence: number;
+  resources?: Resource[];
+}
+
+export interface SoapNote {
+  id: number;
+  date: string;
+  preview: string;
+}
+
+export interface PatientCase {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  date: string;
+  chiefComplaint: string;
+  status: string;
+  differentials: Differential[];
+  soapNotes: SoapNote[];
+}
+
 // --- Mock Data ---
-const recentPatients = [
+const recentPatients: PatientCase[] = [
   { 
     id: "PAT-456024778", name: "Test Patient", age: 55, gender: "female", date: "4/24/2026", chiefComplaint: "CC: 3 days of progressive dyspnea", status: "Finalized",
     differentials: [
@@ -238,11 +268,11 @@ export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("All Cases");
   const [showHandoff, setShowHandoff] = useState(false);
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);
-  const [teachingCase, setTeachingCase] = useState<any | null>(null);
+  const [teachingCase, setTeachingCase] = useState<PatientCase | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [vignetteText, setVignetteText] = useState("");
   const [showStudyHub, setShowStudyHub] = useState(false);
-  const [selectedStudyPatient, setSelectedStudyPatient] = useState<any | null>(null);
+  const [selectedStudyPatient, setSelectedStudyPatient] = useState<PatientCase | null>(null);
   const [showToolkit, setShowToolkit] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tasks, setTasks] = useState([
@@ -504,7 +534,7 @@ export default function Dashboard() {
                                   Baseline Assessment
                                 </h4>
                                 <div className="space-y-3">
-                                  {patient.differentials.map((diff: any, idx: number) => (
+                                  {patient.differentials.map((diff: Differential, idx: number) => (
                                     <div key={idx} className="flex flex-col gap-1">
                                       <div className="flex justify-between text-sm">
                                         <span className="font-medium text-foreground">{diff.name}</span>
@@ -544,7 +574,7 @@ export default function Dashboard() {
                                 </div>
                               ) : patient.soapNotes && patient.soapNotes.length > 0 ? (
                                 <div className="space-y-3 pl-2 border-l-2 border-muted ml-1">
-                                  {patient.soapNotes.map((note: any) => (
+                                  {patient.soapNotes.map((note: SoapNote) => (
                                     <div key={note.id} className="relative">
                                       <div className="absolute w-2.5 h-2.5 bg-primary rounded-full -left-[14px] top-1.5 border-2 border-background" />
                                       <div className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors cursor-pointer shadow-sm">
@@ -724,7 +754,7 @@ export default function Dashboard() {
                     <h3 className="text-xl font-bold text-foreground">{selectedStudyPatient?.name}</h3>
                     <p className="text-muted-foreground">{selectedStudyPatient?.chiefComplaint}</p>
                   </div>
-                  {selectedStudyPatient?.differentials?.map((diff: any, idx: number) => (
+                  {selectedStudyPatient?.differentials?.map((diff: Differential, idx: number) => (
                     <Card key={idx} className="overflow-hidden">
                       <CardHeader className="bg-muted/30 pb-4">
                         <div className="flex justify-between items-center">
@@ -739,7 +769,7 @@ export default function Dashboard() {
                             Reference Toolkit
                           </h4>
                           <div className="flex flex-wrap gap-2">
-                            {diff.resources?.map((res: any, rIdx: number) => (
+                            {diff.resources?.map((res: Resource, rIdx: number) => (
                               <a key={rIdx} href={res.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs rounded-full hover:bg-secondary/80 transition-colors shadow-sm">
                                 {res.site}
                                 <ExternalLink className="h-3 w-3" />

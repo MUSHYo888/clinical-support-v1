@@ -1,7 +1,7 @@
 // ABOUTME: Unified clinical decision support component integrating investigations and treatment planning
 // ABOUTME: Provides seamless workflow between diagnostic testing and therapeutic decisions
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { useInvestigationRecommendations } from '@/hooks/useInvestigationRecommendations';
 import { InvestigationIntelligenceService } from '@/services/investigationIntelligenceService';
-import { TreatmentManagementService } from '@/services/treatmentManagementService';
+import { TreatmentManagementService, PatientClinicalData } from '@/services/treatmentManagementService';
 import { DifferentialDiagnosisEngine } from './DifferentialDiagnosisEngine';
 import { ClinicalScoringSystem } from './ClinicalScoringSystem';
 import { useMedical } from '@/hooks/useMedical';
@@ -105,7 +105,6 @@ export function ClinicalDecisionSupport({
   const {
     recommendations,
     redFlags,
-    guidelines,
     loading: aiLoading,
     error: aiError
   } = useInvestigationRecommendations(
@@ -124,8 +123,7 @@ export function ClinicalDecisionSupport({
           const intelligence = InvestigationIntelligenceService.generateInvestigationIntelligence(
             rec.investigation.id,
             chiefComplaint,
-            { answers: state.answers, rosData: state.rosData },
-            diagnoses
+            { answers: state.answers, rosData: state.rosData }
           );
           return { ...rec, intelligence };
         })
@@ -135,8 +133,7 @@ export function ClinicalDecisionSupport({
       const treatment = TreatmentManagementService.generateTreatmentRecommendation(
         chiefComplaint,
         'moderate',
-        state.currentPatient,
-        diagnoses
+        (state.currentPatient || {}) as unknown as PatientClinicalData
       );
       setTreatmentRecommendation(treatment);
 
@@ -545,7 +542,6 @@ export function ClinicalDecisionSupport({
 
             <TabsContent value="scoring" className="space-y-6">
               <ClinicalScoringSystem
-                chiefComplaint={chiefComplaint}
                 patientData={state.currentPatient}
               />
             </TabsContent>
@@ -557,12 +553,12 @@ export function ClinicalDecisionSupport({
                   Investigation Recommendations
                 </h3>
                 <Badge variant="outline">
-                {selectedInvestigations.length} selected | Est. ${totalCost}
+                  {selectedInvestigations.length} selected | Est. ${calculateTotalCost()}
                 </Badge>
               </div>
 
               <div className="space-y-4">
-                {investigationIntelligence.map((item, index) => (
+                {investigationIntelligence.map((item) => (
                   <Card key={item.investigation.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex items-start space-x-4">
@@ -864,7 +860,7 @@ export function ClinicalDecisionSupport({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium">Investigations ({selectedInvestigations.length})</p>
-              <p className="text-muted-foreground">Est. Cost: ${totalCost}</p>
+                  <p className="text-muted-foreground">Est. Cost: ${calculateTotalCost()}</p>
                 </div>
                 <div>
                   <p className="font-medium">Treatment Plan</p>

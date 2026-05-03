@@ -3,12 +3,12 @@
 // ABOUTME: Evaluates patient safety and identifies contraindications for investigations
 
 import { ContraindicationCheck, Contraindication, Warning, Precaution } from '@/types/investigation-intelligence';
-import { InvestigationDatabaseService } from './InvestigationDatabaseService';
+import { InvestigationDatabaseService, ContraindicationData } from './InvestigationDatabaseService';
 
 export class ContraindicationChecker {
   static checkContraindications(
     investigationId: string,
-    patientData: any,
+    patientData: unknown,
     medicalHistory: string[] = []
   ): ContraindicationCheck {
     const contraindicationDatabase = InvestigationDatabaseService.getContraindicationDatabase();
@@ -27,7 +27,7 @@ export class ContraindicationChecker {
     };
   }
 
-  private static detectContraindications(contraData: any, _patientData: any, history: string[]) {
+  private static detectContraindications(contraData: ContraindicationData, _patientData: unknown, history: string[]) {
     // Simplified contraindication detection logic
     const contraindications: Contraindication[] = [];
     const warnings: Warning[] = contraData.warnings || [];

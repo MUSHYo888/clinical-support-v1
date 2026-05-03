@@ -7,19 +7,20 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download, Loader2 } from 'lucide-react';
 import { PDFGeneratorService } from '@/services/reporting/PDFGeneratorService';
 import { ClinicalReportService } from '@/services/reporting/ClinicalReportService';
-import { Patient, DifferentialDiagnosis } from '@/types/medical';
+import { Patient, DifferentialDiagnosis, Answer, ReviewOfSystems, PastMedicalHistoryData } from '@/types/medical';
+import { PhysicalExamData } from '@/types/physical-exam';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PDFExportButtonProps {
   assessmentId: string;
   patient: Patient;
   chiefComplaint: string;
-  answers: Record<string, any>;
-  rosData: Record<string, any>;
+  answers: Record<string, Answer>;
+  rosData: ReviewOfSystems;
   differentials: DifferentialDiagnosis[];
-  pmhData?: any;
-  peData?: any;
+  pmhData?: PastMedicalHistoryData | null;
+  peData?: PhysicalExamData | null;
   variant?: 'default' | 'outline' | 'secondary';
   size?: 'sm' | 'default' | 'lg';
 }
@@ -58,7 +59,7 @@ export function PDFExportButton({
           location: patient.location
         },
         chiefComplaint,
-        historyPresentIllness: Object.values(answers).map((answer: any) => 
+        historyPresentIllness: Object.values(answers).map((answer: Answer) => 
           typeof answer.value === 'string' ? answer.value : JSON.stringify(answer.value)
         ),
         reviewOfSystems: rosData,

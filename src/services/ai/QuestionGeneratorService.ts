@@ -3,7 +3,7 @@
 // ABOUTME: Handles intelligent question generation with UUID validation and fallback mechanisms
 
 import { supabase } from '@/integrations/supabase/client';
-import { Question } from '@/types/medical';
+import { Question, Answer } from '@/types/medical';
 import { FallbackDataService } from '../fallback/FallbackDataService';
 import { withRetry } from '@/utils/withRetry';
 
@@ -22,7 +22,7 @@ function isValidUUID(uuid: string): boolean {
 export class QuestionGeneratorService {
   static async generateQuestions(
     chiefComplaint: string,
-    previousAnswers?: Record<string, any>
+    previousAnswers?: Record<string, Answer>
   ): Promise<Question[]> {
     try {
       const result = await withRetry(async () => {
@@ -39,7 +39,7 @@ export class QuestionGeneratorService {
         if (!data?.questions) throw new Error('Invalid response - no questions returned');
 
         // Validate and fix question IDs
-        const validatedQuestions = data.questions.map((question: any, index: number) => {
+        const validatedQuestions = data.questions.map((question: Partial<Question>, index: number) => {
           if (!question.id || !isValidUUID(question.id)) {
             question.id = generateUUID();
           }
@@ -47,7 +47,7 @@ export class QuestionGeneratorService {
           if (!question.type) question.type = 'text';
           if (!question.category) question.category = 'general';
           if (typeof question.required !== 'boolean') question.required = true;
-          return question;
+          return question as Question;
         });
 
         return validatedQuestions;

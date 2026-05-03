@@ -17,7 +17,7 @@ import {
 
 interface ROSSystem {
   name: string;
-  icon: any;
+  icon: React.ElementType;
   symptoms: string[];
   genderFilter?: 'male' | 'female';
 }

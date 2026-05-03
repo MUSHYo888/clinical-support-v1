@@ -1,9 +1,8 @@
-cli// ABOUTME: Clinical scoring systems component for calculating severity scores and risk assessments
+// ABOUTME: Clinical scoring systems component for calculating severity scores and risk assessments
 // ABOUTME: Provides interactive calculators for QSOFA, CURB-65, Wells scores with real-time clinical insights
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +11,6 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Calculator, 
-  TrendingUp, 
   AlertTriangle, 
   Shield,
   
@@ -26,13 +24,13 @@ import {
 } from 'lucide-react';
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
 import { SeverityScore, RiskAssessment, TriageRecommendation } from '@/types/clinical-scores';
+import { Patient } from '@/types/medical';
 
 interface ClinicalScoringSystemProps {
-  chiefComplaint: string;
-  patientData?: any;
+  patientData?: (Patient & { comorbidities?: string[] }) | null;
 }
 
-export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalScoringSystemProps) {
+export function ClinicalScoringSystem({ patientData }: ClinicalScoringSystemProps) {
   // QSOFA Score State
   const [qsofaData, setQsofaData] = useState({
     systolicBP: '',
@@ -69,7 +67,7 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
   const [triageRecommendation, setTriageRecommendation] = useState<TriageRecommendation | null>(null);
 
   // Calculate QSOFA Score
-  const calculateQSOFA = () => {
+  const calculateQSOFA = useCallback(() => {
     const systolic = parseInt(qsofaData.systolicBP);
     const respiratory = parseInt(qsofaData.respiratoryRate);
     const gcs = parseInt(qsofaData.glasgowComaScale);
@@ -78,10 +76,10 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
 
     const score = ClinicalScoringService.calculateQSOFA(systolic, respiratory, gcs);
     setQsofaScore(score);
-  };
+  }, [qsofaData]);
 
   // Calculate CURB-65 Score
-  const calculateCURB65 = () => {
+  const calculateCURB65 = useCallback(() => {
     const urea = parseFloat(curb65Data.urea);
     const respiratory = parseInt(curb65Data.respiratoryRate);
     const systolic = parseInt(curb65Data.systolicBP);
@@ -94,10 +92,10 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
       curb65Data.confusion, urea, respiratory, systolic, diastolic, age
     );
     setCurb65Score(score);
-  };
+  }, [curb65Data]);
 
   // Calculate Wells Score
-  const calculateWells = () => {
+  const calculateWells = useCallback(() => {
     const heartRate = parseInt(wellsData.heartRate);
     if (isNaN(heartRate)) return;
 
@@ -111,10 +109,10 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
       wellsData.malignancy
     );
     setWellsScore(score);
-  };
+  }, [wellsData]);
 
   // Calculate Overall Risk Assessment
-  const calculateOverallRisk = () => {
+  const calculateOverallRisk = useCallback(() => {
     if (!patientData) return;
 
     const age = parseInt(curb65Data.age) || patientData.age || 0;
@@ -127,8 +125,7 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
     const risk = ClinicalScoringService.assessOverallRisk(
       age,
       vitalSigns,
-      patientData.comorbidities || [],
-      [chiefComplaint]
+      patientData.comorbidities || []
     );
     setOverallRisk(risk);
 
@@ -142,26 +139,26 @@ export function ClinicalScoringSystem({ chiefComplaint, patientData }: ClinicalS
       );
       setTriageRecommendation(triage);
     }
-  };
+  }, [patientData, curb65Data.age, qsofaData.systolicBP, qsofaData.respiratoryRate, wellsData.heartRate, qsofaScore, curb65Score, wellsScore]);
 
   // Auto-calculate when data changes
   useEffect(() => {
     calculateQSOFA();
-  }, [qsofaData]);
+  }, [calculateQSOFA]);
 
   useEffect(() => {
     calculateCURB65();
-  }, [curb65Data]);
+  }, [calculateCURB65]);
 
   useEffect(() => {
     calculateWells();
-  }, [wellsData]);
+  }, [calculateWells]);
 
   useEffect(() => {
     if (qsofaScore || curb65Score || wellsScore) {
       calculateOverallRisk();
     }
-  }, [qsofaScore, curb65Score, wellsScore, patientData]);
+  }, [qsofaScore, curb65Score, wellsScore, calculateOverallRisk]);
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {

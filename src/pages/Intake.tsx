@@ -253,8 +253,31 @@ export default function Intake() {
       if (assessmentError) throw assessmentError;
 
       // Ensure context has the new patient and assessment so ClinicalSummary can fetch data
-      dispatch({ type: 'SET_CURRENT_PATIENT', payload: patient as any });
-      dispatch({ type: 'SET_CURRENT_ASSESSMENT', payload: assessment as any });
+      dispatch({ 
+        type: 'SET_CURRENT_PATIENT', 
+        payload: {
+          id: patient.id,
+          name: patient.name,
+          age: patient.age,
+          gender: patient.gender as 'male' | 'female' | 'other',
+          patientId: patient.patient_id,
+          location: patient.location || '',
+          createdAt: patient.created_at,
+          lastAssessment: patient.last_assessment || undefined
+        }
+      });
+      dispatch({ 
+        type: 'SET_CURRENT_ASSESSMENT', 
+        payload: {
+          id: assessment.id,
+          patientId: assessment.patient_id,
+          chiefComplaint: assessment.chief_complaint,
+          status: assessment.status as 'in-progress' | 'completed' | 'draft',
+          currentStep: assessment.current_step,
+          createdAt: assessment.created_at,
+          updatedAt: assessment.updated_at
+        } 
+      });
 
       toast.success("History completed and saved successfully!");
       setStep(8);

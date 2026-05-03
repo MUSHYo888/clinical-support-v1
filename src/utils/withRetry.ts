@@ -7,7 +7,7 @@ export async function withRetry<T>(
   maxRetries: number = 3,
   backoffMs: number = 1000
 ): Promise<T> {
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {

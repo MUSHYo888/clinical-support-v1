@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EnhancedQuestionGeneratorService, PhaseTransitionData } from '@/services/clinical/EnhancedQuestionGeneratorService';
 import { Question, Answer } from '@/types/medical';
 import { useMedical } from '@/hooks/useMedical';
@@ -16,7 +15,7 @@ import { AssessmentHeader } from './AssessmentHeader';
 import { LoadingState } from './LoadingState';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useStepManager } from './StepManager';
-import { useSaveQuestions, useSaveAnswer, useSavePMH, useSavePE, useCompleteAssessment } from '@/hooks/useAssessment';
+import { useSaveQuestions, useSaveAnswer, useCompleteAssessment } from '@/hooks/useAssessment';
 import { toast } from 'sonner';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { AssessmentErrorRecovery } from './AssessmentErrorRecovery';
@@ -34,12 +33,10 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
   const [phase1Questions, setPhase1Questions] = useState<Question[]>([]);
   const [phase1Answers, setPhase1Answers] = useState<Record<string, Answer>>({});
   const [currentPhase1Index, setCurrentPhase1Index] = useState(0);
-  const [phase1Complete, setPhase1Complete] = useState(false);
   
   // Phase 2 questions state
   const [phase2Questions, setPhase2Questions] = useState<Question[]>([]);
   const [currentPhase2Index, setCurrentPhase2Index] = useState(0);
-  const [phase2Complete, setPhase2Complete] = useState(false);
   const [phase2Triggered, setPhase2Triggered] = useState(false);
   
   // Transition data
@@ -55,8 +52,6 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
 
   const saveQuestionsMutation = useSaveQuestions();
   const saveAnswerMutation = useSaveAnswer();
-  const savePMHMutation = useSavePMH();
-  const savePEMutation = useSavePE();
   const completeAssessmentMutation = useCompleteAssessment();
   const { updateStep } = useStepManager();
   
@@ -71,17 +66,7 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
     'Patient Summary & Documentation'
   ];
 
-  useEffect(() => {
-    if (isCompleted) {
-      setCurrentView('summary');
-      setLoading(false);
-    } else {
-      setCurrentView(state.currentStep || 1);
-      loadPhase1Questions();
-    }
-  }, [chiefComplaint, isCompleted, state.currentStep]);
-
-  const loadPhase1Questions = async () => {
+  const loadPhase1Questions = useCallback(async () => {
     if (isCompleted) return;
     
     try {
@@ -101,9 +86,9 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
           
           // Only set local state after successful database save
           setPhase1Questions(questions);
-        } catch (saveError) {
+        } catch (saveError: unknown) {
           console.error('Failed to save Phase 1 questions:', saveError);
-          const errorMessage = saveError?.message || 'Unknown database error';
+          const errorMessage = saveError instanceof Error ? saveError.message : (saveError as { message?: string })?.message || 'Unknown database error';
           
           // Check for specific constraint violations
           if (errorMessage.includes('questions_question_type_check')) {
@@ -124,15 +109,25 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
         setPhase1Questions(questions);
       }
       
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading Phase 1 questions:', err);
-      setError(`Failed to load Phase 1 questions: ${err.message || 'Unknown error'}`);
+      setError(`Failed to load Phase 1 questions: ${err instanceof Error ? err.message : (err as { message?: string })?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [chiefComplaint, isCompleted, state.currentAssessment, saveQuestionsMutation]);
 
-  const handleAnswerSubmit = async (questionId: string, answer: any) => {
+  useEffect(() => {
+    if (isCompleted) {
+      setCurrentView('summary');
+      setLoading(false);
+    } else {
+      setCurrentView(state.currentStep || 1);
+      loadPhase1Questions();
+    }
+  }, [isCompleted, state.currentStep, loadPhase1Questions]);
+
+  const handleAnswerSubmit = async (questionId: string, answer: Omit<Answer, 'questionId'>) => {
     
     if (!state.currentAssessment) {
       console.error('No current assessment found');
@@ -180,8 +175,9 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
       }
 
     } catch (error) {
-      console.error(`Error saving answer: ${error.message}`);
-      toast.error(`Failed to save answer: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error saving answer: ${errorMessage}`);
+      toast.error(`Failed to save answer: ${errorMessage}`);
       setError(`Failed to save your answer. Please try again.`);
     }
   };
@@ -202,7 +198,6 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
         );
         
         setPhaseTransition(transitionData);
-        setPhase1Complete(true);
         
         // Save Phase 1 completion
         if (state.currentAssessment) {
@@ -265,7 +260,6 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
       setCurrentPhase2Index(prev => prev + 1);
     } else {
       // Phase 2 complete
-      setPhase2Complete(true);
       
       // Save Phase 2 completion
       if (state.currentAssessment) {
@@ -300,7 +294,7 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
     await updateStep(5);
   };
 
-  const handleClinicalDecisionSupportComplete = async (clinicalPlan: any) => {
+  const handleClinicalDecisionSupportComplete = async () => {
     try {
       setStepTransitionLoading(true);
       setCurrentView('summary');

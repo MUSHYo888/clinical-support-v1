@@ -11,11 +11,19 @@ import {
   DischargeInstruction
 } from '@/types/treatment-management';
 
+export interface PatientClinicalData {
+  id?: string;
+  medicalHistory?: string[];
+  currentMedications?: string[];
+  allergies?: string[];
+  [key: string]: unknown;
+}
+
 export class TreatmentManagementService {
 
   static generateMedicationSuggestions(
     condition: string,
-    patientData: any,
+    patientData: PatientClinicalData,
     currentMedications: string[] = [],
     allergies: string[] = []
   ): MedicationSuggestion[] {
@@ -113,7 +121,7 @@ export class TreatmentManagementService {
   static generateTreatmentRecommendation(
     condition: string,
     severity: string,
-    patientData: any
+    patientData: PatientClinicalData
   ): TreatmentRecommendation {
     const medicationSuggestions = this.generateMedicationSuggestions(
       condition,
@@ -277,7 +285,7 @@ export class TreatmentManagementService {
     return highEvidenceMeds.includes(medication.genericName.toLowerCase()) ? 'A' : 'B';
   }
 
-  private static isContraindicated(medication: Medication, patientData: any, allergies: string[]): boolean {
+  private static isContraindicated(medication: Medication, patientData: PatientClinicalData, allergies: string[]): boolean {
     // Check allergies
     if (allergies.some(allergy => 
       medication.name.toLowerCase().includes(allergy.toLowerCase()) ||
@@ -312,7 +320,7 @@ export class TreatmentManagementService {
     return {
       pathwayId: `${condition}-${severity}-default`,
       condition,
-      severity: severity as any,
+      severity: severity as TreatmentPathway['severity'],
       evidenceLevel: 'C',
       guidelineSource: 'Clinical consensus',
       firstLineTherapy: {

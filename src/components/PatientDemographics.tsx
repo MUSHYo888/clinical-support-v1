@@ -11,7 +11,7 @@ interface PatientDemographicsProps {
     location: string;
     patientId: string;
   };
-  updateField: (field: string, value: any) => void;
+  updateField: (field: string, value: unknown) => void;
 }
 
 export function PatientDemographics({ formData, updateField }: PatientDemographicsProps) {

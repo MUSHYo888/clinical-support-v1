@@ -4,14 +4,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { withRetry } from '@/utils/withRetry';
+import { DifferentialDiagnosis, Answer, ReviewOfSystems, ClinicalDecisionSupport } from '@/types/medical';
 
 export class ClinicalSupportService {
   static async generateClinicalDecisionSupport(
     chiefComplaint: string,
-    differentialDiagnoses: any[],
-    answers: Record<string, any>,
-    rosData?: Record<string, any>
-  ): Promise<any> {
+    differentialDiagnoses: DifferentialDiagnosis[],
+    answers: Record<string, Answer>,
+    rosData?: ReviewOfSystems
+  ): Promise<ClinicalDecisionSupport> {
     try {
       const result = await withRetry(async () => {
         
@@ -29,7 +30,7 @@ export class ClinicalSupportService {
         if (data?.error) throw new Error(data.error);
         if (!data?.clinicalSupport) throw new Error('Invalid response from AI service');
 
-        return data.clinicalSupport;
+        return data.clinicalSupport as ClinicalDecisionSupport;
       }, 3, 1000);
 
       return result;
