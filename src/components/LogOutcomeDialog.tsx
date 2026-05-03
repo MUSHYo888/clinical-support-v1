@@ -36,7 +36,7 @@ export function LogOutcomeDialog({ assessmentId, patientId, onSuccess }: LogOutc
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('patient_outcomes').insert({
+      const { error } = await (supabase.from('patient_outcomes' as never) as never as { insert: (v: unknown) => Promise<{ error: Error | null }> }).insert({
         assessment_id: assessmentId,
         patient_id: patientId,
         outcome,
