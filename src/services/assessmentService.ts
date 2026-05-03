@@ -73,7 +73,7 @@ export class AssessmentService {
     }
     const { error } = await supabase
       .from('assessments')
-      .update(updateData)
+      .update(updateData as TablesUpdate<'assessments'>)
       .eq('id', assessmentId);
 
     if (error) {
@@ -172,7 +172,7 @@ export class AssessmentService {
     const { error } = await supabase
       .from('past_medical_history')
       .upsert({
-        id: assessmentId,
+        assessment_id: assessmentId,
         conditions: pmhData.conditions || [],
         surgeries: pmhData.surgeries || [],
         medications: pmhData.medications || [],
@@ -180,7 +180,7 @@ export class AssessmentService {
         family_history: pmhData.familyHistory || '',
         social_history: pmhData.socialHistory || '',
         social_history_structured: pmhData.socialHistoryStructured as unknown as Json || null
-      }, { onConflict: 'id' });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PMH data:', error);
@@ -192,11 +192,11 @@ export class AssessmentService {
     const { error } = await supabase
       .from('physical_examination')
       .upsert({
-        id: assessmentId,
+        assessment_id: assessmentId,
         vital_signs: peData.vitalSigns as unknown as Json || {},
         systems: peData.systems as unknown as Json || {},
         general_appearance: peData.generalAppearance || ''
-      }, { onConflict: 'id' });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PE data:', error);
