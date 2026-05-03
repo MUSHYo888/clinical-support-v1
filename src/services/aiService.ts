@@ -6,6 +6,7 @@ import { AdvancedClinicalSupport, SeverityScore, ClinicalAlert } from '@/types/c
 import { ClinicalScoringService } from '@/services/clinicalScoringService';
 import { FallbackDataService } from './fallback/FallbackDataService';
 import { withRetry } from '@/utils/withRetry';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface DDxResponse {
   diagnosis?: string;
@@ -50,39 +51,18 @@ export class AIService {
     });
   }
 
-  private static async callGroq(systemPrompt: string, userPrompt: string): Promise<Record<string, unknown>> {
+  private static async callAIAssistant(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withRetry(async () => {
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY || 'mock-key-for-local-testing';
-      if (!import.meta.env.VITE_GROQ_API_KEY && import.meta.env.DEV) {
-        console.warn('VITE_GROQ_API_KEY missing locally. Falling back to mock data.');
-      }
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2
-        })
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { action, ...payload },
       });
-
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Groq API Error: ${response.status} ${err}`);
+      if (error) {
+        throw new Error(`AI assistant error: ${error.message}`);
       }
-
-      const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
+      return data as Record<string, unknown>;
     }, 3, 1000);
   }
+
 
   static async generateQuestions(
     chiefComplaint: string, 
@@ -96,7 +76,7 @@ export class AIService {
       
       const userPrompt = `Chief complaint: ${chiefComplaint}\nPrevious answers: ${JSON.stringify(previousAnswers || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as { questions?: Partial<Question>[] };
+      const result = await this.callAIAssistant('generate-questions', { chiefComplaint, previousAnswers: previousAnswers || {} }) as { questions?: Partial<Question>[] };
       const questions = (result.questions || []).map((q: Partial<Question>) => ({
         ...q,
         id: q.id && q.id !== 'uuid' ? q.id : this.generateUUID(),
@@ -131,7 +111,7 @@ export class AIService {
 
       const userPrompt = `Chief Complaint: ${chiefComplaint}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as { differentials?: DifferentialDiagnosis[], pertinentNegatives?: string[], soapNote?: string };
+      const result = await this.callAIAssistant('generate-differential', { chiefComplaint, answers, rosData: rosData || {} }) as { differentials?: DifferentialDiagnosis[], pertinentNegatives?: string[], soapNote?: string };
 
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, true);
       return {
@@ -164,7 +144,8 @@ export class AIService {
 
       const userPrompt = `Chief complaint: ${chiefComplaint}\nDifferential diagnoses: ${JSON.stringify(differentialDiagnoses)}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as unknown as ClinicalDecisionSupport;
+      const cdsResult = await this.callAIAssistant('generate-clinical-support', { chiefComplaint, differentialDiagnoses, answers, rosData: rosData || {} }) as { clinicalSupport?: ClinicalDecisionSupport };
+      const result = (cdsResult.clinicalSupport || cdsResult) as unknown as ClinicalDecisionSupport;
 
       this.logAICall('generateClinicalDecisionSupport', chiefComplaint, true);
       return result;
