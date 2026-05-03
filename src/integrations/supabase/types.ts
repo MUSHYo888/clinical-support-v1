@@ -62,7 +62,6 @@ export type Database = {
           patient_id: string
           status: string
           updated_at: string
-          ai_analysis?: Json | null
         }
         Insert: {
           chief_complaint: string
@@ -72,7 +71,6 @@ export type Database = {
           patient_id: string
           status?: string
           updated_at?: string
-          ai_analysis?: Json | null
         }
         Update: {
           chief_complaint?: string
@@ -82,7 +80,6 @@ export type Database = {
           patient_id?: string
           status?: string
           updated_at?: string
-          ai_analysis?: Json | null
         }
         Relationships: [
           {
@@ -213,129 +210,52 @@ export type Database = {
       }
       past_medical_history: {
         Row: {
-          id: string
-          conditions: string[] | null
-          surgeries: string[] | null
-          medications: string[] | null
-          allergies: string[] | null
+          allergies: Json
+          assessment_id: string
+          conditions: Json
+          created_at: string
           family_history: string | null
+          id: string
+          medications: Json
           social_history: string | null
           social_history_structured: Json | null
-        }
-        Insert: {
-          id: string
-          conditions?: string[] | null
-          surgeries?: string[] | null
-          medications?: string[] | null
-          allergies?: string[] | null
-          family_history?: string | null
-          social_history?: string | null
-          social_history_structured?: Json | null
-        }
-        Update: {
-          id?: string
-          conditions?: string[] | null
-          surgeries?: string[] | null
-          medications?: string[] | null
-          allergies?: string[] | null
-          family_history?: string | null
-          social_history?: string | null
-          social_history_structured?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "past_medical_history_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "assessments"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      physical_examination: {
-        Row: {
-          id: string
-          vital_signs: Json | null
-          systems: Json | null
-          general_appearance: string | null
-        }
-        Insert: {
-          id: string
-          vital_signs?: Json | null
-          systems?: Json | null
-          general_appearance?: string | null
-        }
-        Update: {
-          id?: string
-          vital_signs?: Json | null
-          systems?: Json | null
-          general_appearance?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "physical_examination_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "assessments"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      patient_outcomes: {
-        Row: {
-          assessment_id: string
-          cost_efficiency_score: number | null
-          created_at: string
-          diagnostic_accuracy_score: number | null
-          follow_up_date: string | null
-          id: string
-          outcome: string | null
-          patient_id: string
-          patient_satisfaction_score: number | null
-          treatment_effectiveness_score: number | null
+          surgeries: Json
           updated_at: string
         }
         Insert: {
+          allergies?: Json
           assessment_id: string
-          cost_efficiency_score?: number | null
+          conditions?: Json
           created_at?: string
-          diagnostic_accuracy_score?: number | null
-          follow_up_date?: string | null
+          family_history?: string | null
           id?: string
-          outcome?: string | null
-          patient_id: string
-          patient_satisfaction_score?: number | null
-          treatment_effectiveness_score?: number | null
+          medications?: Json
+          social_history?: string | null
+          social_history_structured?: Json | null
+          surgeries?: Json
           updated_at?: string
         }
         Update: {
+          allergies?: Json
           assessment_id?: string
-          cost_efficiency_score?: number | null
+          conditions?: Json
           created_at?: string
-          diagnostic_accuracy_score?: number | null
-          follow_up_date?: string | null
+          family_history?: string | null
           id?: string
-          outcome?: string | null
-          patient_id?: string
-          patient_satisfaction_score?: number | null
-          treatment_effectiveness_score?: number | null
+          medications?: Json
+          social_history?: string | null
+          social_history_structured?: Json | null
+          surgeries?: Json
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "patient_outcomes_assessment_id_fkey"
+            foreignKeyName: "past_medical_history_assessment_id_fkey"
             columns: ["assessment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "patient_outcomes_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          }
         ]
       }
       patients: {
@@ -401,6 +321,44 @@ export type Database = {
             foreignKeyName: "phase_answers_assessment_id_fkey"
             columns: ["assessment_id"]
             isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physical_examination: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          general_appearance: string | null
+          id: string
+          systems: Json
+          updated_at: string
+          vital_signs: Json
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          general_appearance?: string | null
+          id?: string
+          systems?: Json
+          updated_at?: string
+          vital_signs?: Json
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          general_appearance?: string | null
+          id?: string
+          systems?: Json
+          updated_at?: string
+          vital_signs?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physical_examination_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: true
             referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
@@ -705,7 +663,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_can_access_assessment: {
+        Args: { assessment_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
