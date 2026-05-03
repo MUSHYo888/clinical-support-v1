@@ -111,7 +111,7 @@ export class AIService {
 
       const userPrompt = `Chief Complaint: ${chiefComplaint}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as { differentials?: DifferentialDiagnosis[], pertinentNegatives?: string[], soapNote?: string };
+      const result = await this.callAIAssistant('generate-differential', { chiefComplaint, answers, rosData: rosData || {} }) as { differentials?: DifferentialDiagnosis[], pertinentNegatives?: string[], soapNote?: string };
 
       this.logAICall('generateDifferentialDiagnosis', chiefComplaint, true);
       return {
