@@ -1,0 +1,17 @@
+[
+  "chiefComplaint",
+  "chief_complaint",
+  "patientName",
+  "patient_name",
+  "patientId",
+  "patient_id",
+  "dob",
+  "dateOfBirth",
+  "date_of_birth",
+  "ssn",
+  "mrn",
+  "phoneNumber",
+  "phone_number",
+  "emailAddress",
+  "email_address"
+]
