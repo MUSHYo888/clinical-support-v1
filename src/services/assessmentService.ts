@@ -288,7 +288,7 @@ export class AssessmentService {
     const { data, error } = await supabase
       .from('past_medical_history')
       .select('*')
-      .eq('id', assessmentId)
+      .eq('assessment_id', assessmentId)
       .maybeSingle();
 
     if (error || !data) return null;
@@ -308,7 +308,7 @@ export class AssessmentService {
     const { data, error } = await supabase
       .from('physical_examination')
       .select('*')
-      .eq('id', assessmentId)
+      .eq('assessment_id', assessmentId)
       .maybeSingle();
 
     if (error || !data) return null;
