@@ -31,13 +31,14 @@ export interface AssessmentContext {
 }
 
 export class AIService {
-  private static logAICall(service: string, chiefComplaint: string, success: boolean, error?: Error | unknown) {
+  private static logAICall(service: string, _chiefComplaint: string, success: boolean, error?: Error | unknown) {
+    // Avoid logging PHI (chief complaint) to the browser console.
+    if (!import.meta.env.DEV) return;
     const timestamp = new Date().toISOString();
     const errorMessage = error instanceof Error ? error.message : 'An unknown clinical error occurred';
     console.log({
       timestamp,
       service,
-      chiefComplaint,
       success,
       error: error ? errorMessage : null
     });
