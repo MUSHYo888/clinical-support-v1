@@ -76,7 +76,7 @@ export class AIService {
       
       const userPrompt = `Chief complaint: ${chiefComplaint}\nPrevious answers: ${JSON.stringify(previousAnswers || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as { questions?: Partial<Question>[] };
+      const result = await this.callAIAssistant('generate-questions', { chiefComplaint, previousAnswers: previousAnswers || {} }) as { questions?: Partial<Question>[] };
       const questions = (result.questions || []).map((q: Partial<Question>) => ({
         ...q,
         id: q.id && q.id !== 'uuid' ? q.id : this.generateUUID(),
