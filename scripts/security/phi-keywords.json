@@ -3,6 +3,8 @@
   "chief_complaint",
   "patientName",
   "patient_name",
+  "patientId",
+  "patient_id",
   "dob",
   "dateOfBirth",
   "date_of_birth",
@@ -10,10 +12,6 @@
   "mrn",
   "phoneNumber",
   "phone_number",
-  "address",
-  "email",
-  "diagnosis",
-  "symptoms",
-  "medication",
-  "allergies"
+  "emailAddress",
+  "email_address"
 ]
