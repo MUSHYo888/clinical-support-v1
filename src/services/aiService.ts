@@ -186,7 +186,7 @@ export class AIService {
       
       const riskAssessment = ClinicalScoringService.assessOverallRisk(
         age,
-        vitals,
+        vitals as unknown as { [key: string]: unknown; systolicBP?: string | number; heartRate?: string | number },
         this.extractComorbidities(rosData)
       );
 

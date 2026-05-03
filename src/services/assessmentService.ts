@@ -67,13 +67,13 @@ export class AssessmentService {
   }
 
   static async completeAssessment(assessmentId: string, aiAnalysisPayload?: Json): Promise<void> {
-    const updateData: TablesUpdate<'assessments'> = { status: 'completed' };
+    const updateData: TablesUpdate<'assessments'> & { ai_analysis?: Json } = { status: 'completed' };
     if (aiAnalysisPayload) {
       updateData.ai_analysis = aiAnalysisPayload;
     }
     const { error } = await supabase
       .from('assessments')
-      .update(updateData)
+      .update(updateData as TablesUpdate<'assessments'>)
       .eq('id', assessmentId);
 
     if (error) {
@@ -172,7 +172,7 @@ export class AssessmentService {
     const { error } = await supabase
       .from('past_medical_history')
       .upsert({
-        id: assessmentId,
+        assessment_id: assessmentId,
         conditions: pmhData.conditions || [],
         surgeries: pmhData.surgeries || [],
         medications: pmhData.medications || [],
@@ -180,7 +180,7 @@ export class AssessmentService {
         family_history: pmhData.familyHistory || '',
         social_history: pmhData.socialHistory || '',
         social_history_structured: pmhData.socialHistoryStructured as unknown as Json || null
-      }, { onConflict: 'id' });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PMH data:', error);
@@ -192,11 +192,11 @@ export class AssessmentService {
     const { error } = await supabase
       .from('physical_examination')
       .upsert({
-        id: assessmentId,
+        assessment_id: assessmentId,
         vital_signs: peData.vitalSigns as unknown as Json || {},
         systems: peData.systems as unknown as Json || {},
         general_appearance: peData.generalAppearance || ''
-      }, { onConflict: 'id' });
+      }, { onConflict: 'assessment_id' });
 
     if (error) {
       console.error('Error saving PE data:', error);
@@ -288,16 +288,16 @@ export class AssessmentService {
     const { data, error } = await supabase
       .from('past_medical_history')
       .select('*')
-      .eq('id', assessmentId)
+      .eq('assessment_id', assessmentId)
       .maybeSingle();
 
     if (error || !data) return null;
 
     return {
-      conditions: data.conditions || [],
-      surgeries: data.surgeries || [],
-      medications: data.medications || [],
-      allergies: data.allergies || [],
+      conditions: (data.conditions as unknown as string[]) || [],
+      surgeries: (data.surgeries as unknown as string[]) || [],
+      medications: (data.medications as unknown as string[]) || [],
+      allergies: (data.allergies as unknown as string[]) || [],
       familyHistory: data.family_history || '',
       socialHistory: data.social_history || '',
       socialHistoryStructured: (data.social_history_structured as unknown as PastMedicalHistoryData['socialHistoryStructured']) || null
@@ -308,7 +308,7 @@ export class AssessmentService {
     const { data, error } = await supabase
       .from('physical_examination')
       .select('*')
-      .eq('id', assessmentId)
+      .eq('assessment_id', assessmentId)
       .maybeSingle();
 
     if (error || !data) return null;
