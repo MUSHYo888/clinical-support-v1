@@ -1,0 +1,61 @@
+name: Security Scan
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  phi-log-scan:
+    name: PHI in edge function logs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Scan edge functions for PHI in console.* calls
+        run: node scripts/security/check-phi-logs.mjs
+
+  secret-scan:
+    name: Hardcoded secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  dep-audit:
+    name: Dependency vulnerabilities
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: npm audit (high+)
+        run: npm audit --omit=dev --audit-level=high
+
+  edge-fn-check:
+    name: Edge function type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: Deno check supabase/functions
+        run: |
+          shopt -s nullglob
+          files=(supabase/functions/*/index.ts)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No edge functions found."
+            exit 0
+          fi
+          deno check "${files[@]}"

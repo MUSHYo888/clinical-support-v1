@@ -1,0 +1,16 @@
+# Gitleaks config — extends default ruleset with project-specific allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow Supabase publishable/anon key (safe to commit)"
+regexes = [
+  '''VITE_SUPABASE_PUBLISHABLE_KEY''',
+  '''VITE_SUPABASE_URL''',
+  '''VITE_SUPABASE_PROJECT_ID''',
+]
+paths = [
+  '''bun\.lock''',
+  '''package-lock\.json''',
+  '''\.lovable/.*''',
+]
