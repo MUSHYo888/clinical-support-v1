@@ -119,7 +119,7 @@ serve(async (req: Request) => {
       });
     }
 
-    console.log(`[ai-assistant] action="${action}" chiefComplaint="${chiefComplaint}"`);
+    console.log(`[ai-assistant] action="${action}"`);
 
     // Health check
     if (action === 'health-check' || action === 'test') {

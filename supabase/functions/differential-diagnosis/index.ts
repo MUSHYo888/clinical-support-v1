@@ -67,7 +67,7 @@ serve(async (req: Request) => {
     }
 
     const { chiefComplaint, answers, rosData, pmhData, peData, assessmentId } = await req.json();
-    console.log('[differential-diagnosis] Generating for:', chiefComplaint);
+    console.log('[differential-diagnosis] Generating differentials');
 
     const clinicalContext = {
       chiefComplaint,
