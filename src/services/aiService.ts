@@ -51,39 +51,18 @@ export class AIService {
     });
   }
 
-  private static async callGroq(systemPrompt: string, userPrompt: string): Promise<Record<string, unknown>> {
+  private static async callAIAssistant(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> {
     return withRetry(async () => {
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY || 'mock-key-for-local-testing';
-      if (!import.meta.env.VITE_GROQ_API_KEY && import.meta.env.DEV) {
-        console.warn('VITE_GROQ_API_KEY missing locally. Falling back to mock data.');
-      }
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2
-        })
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { action, ...payload },
       });
-
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Groq API Error: ${response.status} ${err}`);
+      if (error) {
+        throw new Error(`AI assistant error: ${error.message}`);
       }
-
-      const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
+      return data as Record<string, unknown>;
     }, 3, 1000);
   }
+
 
   static async generateQuestions(
     chiefComplaint: string, 
