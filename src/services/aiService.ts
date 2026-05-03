@@ -144,7 +144,8 @@ export class AIService {
 
       const userPrompt = `Chief complaint: ${chiefComplaint}\nDifferential diagnoses: ${JSON.stringify(differentialDiagnoses)}\nPatient answers: ${JSON.stringify(answers)}\nReview of Systems: ${JSON.stringify(rosData || {})}`;
       
-      const result = await this.callGroq(systemPrompt, userPrompt) as unknown as ClinicalDecisionSupport;
+      const cdsResult = await this.callAIAssistant('generate-clinical-support', { chiefComplaint, differentialDiagnoses, answers, rosData: rosData || {} }) as { clinicalSupport?: ClinicalDecisionSupport };
+      const result = (cdsResult.clinicalSupport || cdsResult) as unknown as ClinicalDecisionSupport;
 
       this.logAICall('generateClinicalDecisionSupport', chiefComplaint, true);
       return result;
