@@ -66,7 +66,7 @@ export function useInvestigationRecommendations(
           { answers: answersRef.current, rosData: rosDataRef.current }
         );
         
-        setRecommendations(protocolRecommendations);
+        setRecommendations(protocolRecommendations as unknown as InvestigationRecommendation[]);
         setRedFlags(generateProtocolRedFlags(chiefComplaint));
         setGuidelines(generateProtocolGuidelines(chiefComplaint));
         

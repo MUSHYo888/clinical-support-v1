@@ -67,7 +67,7 @@ export class AssessmentService {
   }
 
   static async completeAssessment(assessmentId: string, aiAnalysisPayload?: Json): Promise<void> {
-    const updateData: TablesUpdate<'assessments'> = { status: 'completed' };
+    const updateData: TablesUpdate<'assessments'> & { ai_analysis?: Json } = { status: 'completed' };
     if (aiAnalysisPayload) {
       updateData.ai_analysis = aiAnalysisPayload;
     }
@@ -294,10 +294,10 @@ export class AssessmentService {
     if (error || !data) return null;
 
     return {
-      conditions: data.conditions || [],
-      surgeries: data.surgeries || [],
-      medications: data.medications || [],
-      allergies: data.allergies || [],
+      conditions: (data.conditions as unknown as string[]) || [],
+      surgeries: (data.surgeries as unknown as string[]) || [],
+      medications: (data.medications as unknown as string[]) || [],
+      allergies: (data.allergies as unknown as string[]) || [],
       familyHistory: data.family_history || '',
       socialHistory: data.social_history || '',
       socialHistoryStructured: (data.social_history_structured as unknown as PastMedicalHistoryData['socialHistoryStructured']) || null
