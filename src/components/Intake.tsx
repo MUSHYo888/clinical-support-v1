@@ -572,5 +572,5 @@ export default function Intake() {
         </Card>
       </div>
     </div>
-          )}
+  );
 }
