@@ -16,7 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useMedical } from "@/context/MedicalContext";
 
-import { AssessmentHeader } f/noom "@/components/AssessmentProgress";
+import { AssessmentHeader } from "@/components/AssessmentHeader";
+import { AssessmentProgress } from "@/components/AssessmentProgress";
 import { ReviewOfSystemsComponent } from "@/components/ReviewOfSystemsComponent";
 import { PastMedicalHistory } from "@/components/PastMedicalHistory";
 import { PhysicalExamination } from "@/components/PhysicalExamination";
