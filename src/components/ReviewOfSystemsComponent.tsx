@@ -99,7 +99,12 @@ const rosSystems: ROSSystem[] = [
 
 type SymptomState = 'positive' | 'negative' | null;
 
-export function ReviewOfSystemsComponent() {
+interface ReviewOfSystemsComponentProps {
+  onComplete?: () => void;
+  onBack?: () => void;
+}
+
+export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystemsComponentProps = {}) {
   const { state, dispatch } = useMedical();
   
   const getInitialStates = () => {
