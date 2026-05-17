@@ -118,7 +118,12 @@ const BODY_ZONES = [
   { id: 'general', label: 'General/Skin', icon: PersonStanding }
 ];
 
-export function PhysicalExamination() {
+interface PhysicalExaminationProps {
+  onComplete?: (peData: PhysicalExamData) => void;
+  onBack?: () => void;
+}
+
+export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationProps = {}) {
   const { state, dispatch } = useMedical();
 
   const initializeSystems = () => {
