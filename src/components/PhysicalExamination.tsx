@@ -401,6 +401,16 @@ export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationP
           </form>
         </CardContent>
       </Card>
+      {(onBack || onComplete) && (
+        <div className="flex justify-between pt-6 mt-4 border-t max-w-[95%] mx-auto">
+          {onBack ? (
+            <Button variant="outline" onClick={onBack}>Back</Button>
+          ) : <span />}
+          {onComplete && (
+            <Button onClick={() => onComplete(data)}>Continue</Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
