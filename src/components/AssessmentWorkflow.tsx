@@ -196,8 +196,8 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
             .maybeSingle();
             
           if (assessmentDetails) {
-            if (assessmentDetails.pmh_data) dispatch({ type: 'SET_PMH_DATA', payload: assessmentDetails.pmh_data });
-            if (assessmentDetails.pe_data) dispatch({ type: 'SET_PE_DATA', payload: assessmentDetails.pe_data });
+            if (assessmentDetails.pmh_data) dispatch({ type: 'SET_PMH_DATA', payload: assessmentDetails.pmh_data as any });
+            if (assessmentDetails.pe_data) dispatch({ type: 'SET_PE_DATA', payload: assessmentDetails.pe_data as any });
             
             if (!state.currentPatient && assessmentDetails.patients) {
               const p = assessmentDetails.patients as any;
@@ -614,33 +614,15 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
       );
     case 4:
       return (
-        <PhysicalExamination
-          onComplete={handlePEComplete}
-          onBack={() => {
-            setCurrentView(3);
-            dispatch({ type: 'SET_STEP', payload: 3 });
-          }}
-        />
+        <PhysicalExamination />
       );
     case 3:
       return (
-        <PastMedicalHistory
-          onSubmit={handlePMHComplete}
-          onBack={() => {
-            setCurrentView(2);
-            dispatch({ type: 'SET_STEP', payload: 2 });
-          }}
-        />
+        <PastMedicalHistory />
       );
     case 2:
       return (
-        <ReviewOfSystemsComponent
-          onComplete={handleROSComplete}
-          onBack={() => {
-            setCurrentView(1);
-            dispatch({ type: 'SET_STEP', payload: 1 });
-          }}
-        />
+        <ReviewOfSystemsComponent />
       );
     case 1:
     default:
@@ -648,18 +630,16 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
         <div className="p-6">
           <Card className="max-w-4xl mx-auto">
             <CardHeader>
-              {currentView !== 8 && currentView !== 'summary' && (
-                <>
-                  <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
-                  <AssessmentProgress
-                    currentStep={state.currentStep}
-                    totalSteps={steps.length}
-                    steps={steps}
-                    progressPercent={progressPercent}
-                    answersCount={answeredCount}
-                  />
-                </>
-              )}
+              <>
+                <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
+                <AssessmentProgress
+                  currentStep={state.currentStep}
+                  totalSteps={steps.length}
+                  steps={steps}
+                  progressPercent={progressPercent}
+                  answersCount={answeredCount}
+                />
+              </>
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Phase {currentPhase}: Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</span>
