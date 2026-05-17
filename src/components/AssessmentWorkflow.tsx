@@ -630,18 +630,16 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
         <div className="p-6">
           <Card className="max-w-4xl mx-auto">
             <CardHeader>
-              {currentView !== 8 && currentView !== 'summary' && (
-                <>
-                  <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
-                  <AssessmentProgress
-                    currentStep={state.currentStep}
-                    totalSteps={steps.length}
-                    steps={steps}
-                    progressPercent={progressPercent}
-                    answersCount={answeredCount}
-                  />
-                </>
-              )}
+              <>
+                <AssessmentHeader chiefComplaint={chiefComplaint} error={error} />
+                <AssessmentProgress
+                  currentStep={state.currentStep}
+                  totalSteps={steps.length}
+                  steps={steps}
+                  progressPercent={progressPercent}
+                  answersCount={answeredCount}
+                />
+              </>
               <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Phase {currentPhase}: Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</span>
