@@ -116,7 +116,7 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
     setFamilyMembers(prev => prev.filter((_, i) => i !== index));
   };
 
-  const compileData = useCallback(() => {
+  const compileData = useCallback((): PastMedicalHistoryFormData => {
     const socialSummary = [
       socialData.smokingStatus && `Smoking: ${socialData.smokingStatus}${socialData.packYears ? ` (${socialData.packYears} pack-years)` : ''}`,
       socialData.alcoholUse && `Alcohol: ${socialData.alcoholUse}${socialData.alcoholDetails ? ` - ${socialData.alcoholDetails}` : ''}`,
