@@ -614,33 +614,15 @@ function AssessmentWorkflowContent({ chiefComplaint, onComplete, onBack }: Asses
       );
     case 4:
       return (
-        <PhysicalExamination
-          onComplete={handlePEComplete}
-          onBack={() => {
-            setCurrentView(3);
-            dispatch({ type: 'SET_STEP', payload: 3 });
-          }}
-        />
+        <PhysicalExamination />
       );
     case 3:
       return (
-        <PastMedicalHistory
-          onSubmit={handlePMHComplete}
-          onBack={() => {
-            setCurrentView(2);
-            dispatch({ type: 'SET_STEP', payload: 2 });
-          }}
-        />
+        <PastMedicalHistory />
       );
     case 2:
       return (
-        <ReviewOfSystemsComponent
-          onComplete={handleROSComplete}
-          onBack={() => {
-            setCurrentView(1);
-            dispatch({ type: 'SET_STEP', payload: 1 });
-          }}
-        />
+        <ReviewOfSystemsComponent />
       );
     case 1:
     default:
