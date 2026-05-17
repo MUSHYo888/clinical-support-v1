@@ -12,34 +12,15 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Separator } from '@/components/ui/separator';
 import { X, Plus } from 'lucide-react';
 import { useMedical } from '@/hooks/useMedical';
-
-interface SocialHistoryData {
-  smokingStatus: string;
-  packYears: string;
-  alcoholUse: string;
-  alcoholDetails: string;
-  occupation: string;
-  livingSituation: string;
-  otherNotes: string;
-}
+import type { PastMedicalHistoryData, SocialHistoryData } from '@/types/medical';
 
 const commonConditions = [
   'Hypertension', 'Diabetes', 'Asthma', 'Heart Disease', 'Stroke',
   'Cancer', 'Kidney Disease', 'Liver Disease', 'Depression', 'Anxiety'
 ];
 
-export interface PastMedicalHistoryFormData {
-  conditions: string[];
-  surgeries: string[];
-  medications: string[];
-  allergies: string[];
-  familyHistory: string;
-  socialHistory: string;
-  socialHistoryStructured: SocialHistoryData;
-}
-
 interface PastMedicalHistoryProps {
-  onSubmit?: (pmhData: PastMedicalHistoryFormData) => void;
+  onSubmit?: (pmhData: PastMedicalHistoryData) => void;
   onBack?: () => void;
 }
 
@@ -116,7 +97,7 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
     setFamilyMembers(prev => prev.filter((_, i) => i !== index));
   };
 
-  const compileData = useCallback((): PastMedicalHistoryFormData => {
+  const compileData = useCallback((): PastMedicalHistoryData => {
     const socialSummary = [
       socialData.smokingStatus && `Smoking: ${socialData.smokingStatus}${socialData.packYears ? ` (${socialData.packYears} pack-years)` : ''}`,
       socialData.alcoholUse && `Alcohol: ${socialData.alcoholUse}${socialData.alcoholDetails ? ` - ${socialData.alcoholDetails}` : ''}`,
