@@ -118,7 +118,12 @@ const BODY_ZONES = [
   { id: 'general', label: 'General/Skin', icon: PersonStanding }
 ];
 
-export function PhysicalExamination() {
+interface PhysicalExaminationProps {
+  onComplete?: (peData: PhysicalExamData) => void;
+  onBack?: () => void;
+}
+
+export function PhysicalExamination({ onComplete, onBack }: PhysicalExaminationProps = {}) {
   const { state, dispatch } = useMedical();
 
   const initializeSystems = () => {
@@ -396,6 +401,16 @@ export function PhysicalExamination() {
           </form>
         </CardContent>
       </Card>
+      {(onBack || onComplete) && (
+        <div className="flex justify-between pt-6 mt-4 border-t max-w-[95%] mx-auto">
+          {onBack ? (
+            <Button variant="outline" onClick={onBack}>Back</Button>
+          ) : <span />}
+          {onComplete && (
+            <Button onClick={() => onComplete(data)}>Continue</Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

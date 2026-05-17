@@ -99,7 +99,12 @@ const rosSystems: ROSSystem[] = [
 
 type SymptomState = 'positive' | 'negative' | null;
 
-export function ReviewOfSystemsComponent() {
+interface ReviewOfSystemsComponentProps {
+  onComplete?: () => void;
+  onBack?: () => void;
+}
+
+export function ReviewOfSystemsComponent({ onComplete, onBack }: ReviewOfSystemsComponentProps = {}) {
   const { state, dispatch } = useMedical();
   
   const getInitialStates = () => {
@@ -336,6 +341,16 @@ export function ReviewOfSystemsComponent() {
           </div>
         </CardContent>
       </Card>
+      {(onBack || onComplete) && (
+        <div className="flex justify-between pt-6 mt-4 border-t">
+          {onBack ? (
+            <Button variant="outline" onClick={onBack}>Back</Button>
+          ) : <span />}
+          {onComplete && (
+            <Button onClick={() => onComplete()}>Continue</Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
