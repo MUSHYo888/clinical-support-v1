@@ -453,6 +453,16 @@ export function PastMedicalHistory({ onSubmit, onBack }: PastMedicalHistoryProps
           </form>
         </CardContent>
       </Card>
+      {(onBack || onSubmit) && (
+        <div className="flex justify-between pt-6 mt-4 border-t">
+          {onBack ? (
+            <Button variant="outline" onClick={onBack}>Back</Button>
+          ) : <span />}
+          {onSubmit && (
+            <Button onClick={() => onSubmit(compileData())}>Continue</Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
